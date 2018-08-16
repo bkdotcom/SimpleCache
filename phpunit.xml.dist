@@ -1,15 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <phpunit colors="true" bootstrap="tests/bootstrap.php">
 	<testsuites>
-		<testsuite name="scrapbook">
+		<testsuite name="simplecache">
 			<directory suffix="Test.php">tests</directory>
 			<exclude>tests/Psr6/Integration</exclude>
 			<exclude>tests/Psr16/Integration</exclude>
 		</testsuite>
 		<testsuite name="integration">
 			<!-- cache/integration-tests depends on cache/tag-interop, which has a 5.5 minimum requirement -->
-			<directory suffix="Test.php" phpVersion="5.5.0" phpVersionOperator=">=">tests/Psr6/Integration</directory>
-			<directory suffix="Test.php" phpVersion="5.5.0" phpVersionOperator=">=">tests/Psr16/Integration</directory>
+			<directory suffix="Test.php" phpVersion="5.5.0" phpVersionOperator="&gt;=">tests/Psr6/Integration</directory>
+			<directory suffix="Test.php" phpVersion="5.5.0" phpVersionOperator="&gt;=">tests/Psr16/Integration</directory>
 		</testsuite>
 	</testsuites>
 	<filter>
@@ -18,6 +18,8 @@
 		</whitelist>
 	</filter>
 	<logging>
+		<!--
 		<log type="coverage-clover" target="build/logs/clover.xml"/>
+		-->
 	</logging>
 </phpunit>

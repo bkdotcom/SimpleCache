@@ -1,9 +1,9 @@
 <?php
 
-namespace MatthiasMullie\Scrapbook\Buffered\Utils;
+namespace bdk\SimpleCache\Buffered\Utils;
 
-use MatthiasMullie\Scrapbook\Exception\UncommittedTransaction;
-use MatthiasMullie\Scrapbook\KeyValueStore;
+use bdk\SimpleCache\Exception\UncommittedTransaction;
+use bdk\SimpleCache\KeyValueStoreInterface;
 
 /**
  * This is a helper class for transactions. It will optimize the write going
@@ -32,10 +32,6 @@ use MatthiasMullie\Scrapbook\KeyValueStore;
  * uses this class: there is no point in re-implementing these checks here.
  * The only acceptable conflicts are when cache values have changed outside,
  * from another process. Those will be handled by this class.
- *
- * @author Matthias Mullie <scrapbook@mullie.eu>
- * @copyright Copyright (c) 2014, Matthias Mullie. All rights reserved
- * @license LICENSE MIT
  */
 class Defer
 {
@@ -66,7 +62,7 @@ class Defer
      * Flush is special - it's not specific to (a) key(s), so we can't store
      * it to $keys.
      *
-     * @var bool
+     * @var boolean
      */
     protected $flush = false;
 
@@ -552,7 +548,7 @@ class Defer
      * @param array $a Update, where index 0 is the operation name
      * @param array $b Update, where index 0 is the operation name
      *
-     * @return int
+     * @return integer
      */
     protected function sortUpdates(array $a, array $b)
     {

@@ -1,11 +1,11 @@
 <?php
 
-namespace MatthiasMullie\Scrapbook\Buffered;
+namespace bdk\SimpleCache\Buffered;
 
-use MatthiasMullie\Scrapbook\Buffered\Utils\Buffer;
-use MatthiasMullie\Scrapbook\Buffered\Utils\Transaction;
-use MatthiasMullie\Scrapbook\Exception\UnbegunTransaction;
-use MatthiasMullie\Scrapbook\KeyValueStore;
+use bdk\SimpleCache\Buffered\Utils\Buffer;
+use bdk\SimpleCache\Buffered\Utils\Transaction;
+use bdk\SimpleCache\Exception\UnbegunTransaction;
+use bdk\SimpleCache\KeyValueStoreInterface;
 
 /**
  * In addition to buffering cache data in memory (see BufferedStore), this class
@@ -21,12 +21,8 @@ use MatthiasMullie\Scrapbook\KeyValueStore;
  *
  * If a commit fails, all keys affected will be deleted to ensure no corrupt
  * data stays behind.
- *
- * @author Matthias Mullie <scrapbook@mullie.eu>
- * @copyright Copyright (c) 2014, Matthias Mullie. All rights reserved
- * @license LICENSE MIT
  */
-class TransactionalStore implements KeyValueStore
+class TransactionalStore implements KeyValueStoreInterface
 {
     /**
      * Array of KeyValueStore objects. Every cache action will be executed
@@ -39,7 +35,7 @@ class TransactionalStore implements KeyValueStore
     /**
      * @param KeyValueStore $cache The real cache we'll buffer for
      */
-    public function __construct(KeyValueStore $cache)
+    public function __construct(KeyValueStoreInterface $cache)
     {
         $this->transactions[] = $cache;
     }
@@ -78,7 +74,7 @@ class TransactionalStore implements KeyValueStore
      * If the any write fails, all subsequent writes will be aborted & all keys
      * that had already been written to will be deleted.
      *
-     * @return bool
+     * @return boolean
      *
      * @throws UnbegunTransaction
      */
@@ -87,17 +83,15 @@ class TransactionalStore implements KeyValueStore
         if (count($this->transactions) <= 1) {
             throw new UnbegunTransaction('Attempted to commit without having begun a transaction.');
         }
-
         /** @var Transaction $transaction */
         $transaction = array_pop($this->transactions);
-
         return $transaction->commit();
     }
 
     /**
      * Roll back all scheduled changes.
      *
-     * @return bool
+     * @return boolean
      *
      * @throws UnbegunTransaction
      */
@@ -106,10 +100,8 @@ class TransactionalStore implements KeyValueStore
         if (count($this->transactions) <= 1) {
             throw new UnbegunTransaction('Attempted to rollback without having begun a transaction.');
         }
-
         /** @var Transaction $transaction */
         $transaction = array_pop($this->transactions);
-
         return $transaction->rollback();
     }
 
@@ -119,18 +111,16 @@ class TransactionalStore implements KeyValueStore
     public function get($key, &$token = null)
     {
         $cache = end($this->transactions);
-
         return $cache->get($key, $token);
     }
 
     /**
      * {@inheritdoc}
      */
-    public function getMulti(array $keys, array &$tokens = null)
+    public function getMultiple(array $keys, array &$tokens = null)
     {
         $cache = end($this->transactions);
-
-        return $cache->getMulti($keys, $tokens);
+        return $cache->getMultiple($keys, $tokens);
     }
 
     /**
@@ -139,18 +129,16 @@ class TransactionalStore implements KeyValueStore
     public function set($key, $value, $expire = 0)
     {
         $cache = end($this->transactions);
-
         return $cache->set($key, $value, $expire);
     }
 
     /**
      * {@inheritdoc}
      */
-    public function setMulti(array $items, $expire = 0)
+    public function setMultiple(array $items, $expire = 0)
     {
         $cache = end($this->transactions);
-
-        return $cache->setMulti($items, $expire);
+        return $cache->setMultiple($items, $expire);
     }
 
     /**
@@ -159,18 +147,16 @@ class TransactionalStore implements KeyValueStore
     public function delete($key)
     {
         $cache = end($this->transactions);
-
         return $cache->delete($key);
     }
 
     /**
      * {@inheritdoc}
      */
-    public function deleteMulti(array $keys)
+    public function deleteMultiple(array $keys)
     {
         $cache = end($this->transactions);
-
-        return $cache->deleteMulti($keys);
+        return $cache->deleteMultiple($keys);
     }
 
     /**
@@ -179,7 +165,6 @@ class TransactionalStore implements KeyValueStore
     public function add($key, $value, $expire = 0)
     {
         $cache = end($this->transactions);
-
         return $cache->add($key, $value, $expire);
     }
 
@@ -189,7 +174,6 @@ class TransactionalStore implements KeyValueStore
     public function replace($key, $value, $expire = 0)
     {
         $cache = end($this->transactions);
-
         return $cache->replace($key, $value, $expire);
     }
 
@@ -199,7 +183,6 @@ class TransactionalStore implements KeyValueStore
     public function cas($token, $key, $value, $expire = 0)
     {
         $cache = end($this->transactions);
-
         return $cache->cas($token, $key, $value, $expire);
     }
 
@@ -209,7 +192,6 @@ class TransactionalStore implements KeyValueStore
     public function increment($key, $offset = 1, $initial = 0, $expire = 0)
     {
         $cache = end($this->transactions);
-
         return $cache->increment($key, $offset, $initial, $expire);
     }
 
@@ -219,7 +201,6 @@ class TransactionalStore implements KeyValueStore
     public function decrement($key, $offset = 1, $initial = 0, $expire = 0)
     {
         $cache = end($this->transactions);
-
         return $cache->decrement($key, $offset, $initial, $expire);
     }
 
@@ -229,7 +210,6 @@ class TransactionalStore implements KeyValueStore
     public function touch($key, $expire)
     {
         $cache = end($this->transactions);
-
         return $cache->touch($key, $expire);
     }
 
@@ -239,7 +219,6 @@ class TransactionalStore implements KeyValueStore
     public function flush()
     {
         $cache = end($this->transactions);
-
         return $cache->flush();
     }
 
@@ -249,7 +228,6 @@ class TransactionalStore implements KeyValueStore
     public function getCollection($name)
     {
         $cache = end($this->transactions);
-
         return new static($cache->getCollection($name));
     }
 }

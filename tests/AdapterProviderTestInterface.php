@@ -1,8 +1,8 @@
 <?php
 
-namespace MatthiasMullie\Scrapbook\Tests;
+namespace bdk\SimpleCache\Tests;
 
-use MatthiasMullie\Scrapbook\KeyValueStore;
+use bdk\SimpleCache\KeyValueStoreInterface;
 use PHPUnit\Framework\TestSuite;
 
 interface AdapterProviderTestInterface
@@ -15,13 +15,11 @@ interface AdapterProviderTestInterface
     /**
      * This is where AdapterProvider will inject the adapter to.
      *
-     * @param KeyValueStore $adapter
+     * @param KeyValueStoreInterface $adapter
      */
-    public function setAdapter(KeyValueStore $adapter);
+    public function setAdapter(KeyValueStoreInterface $adapter);
 
     /**
-     * This is where AdapterProvider will inject the adapter to.
-     *
      * @param string $name
      */
     public function setCollectionName($name);

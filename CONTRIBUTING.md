@@ -2,9 +2,9 @@
 
 ## Issues
 
-When [filing bugs](https://github.com/matthiasmullie/scrapbook/issues/new),
+When [filing bugs](https://github.com/bkdotcom/SimpleCache/issues/new),
 try to be as thorough as possible:
-* What version of Scrapbook did you use?
+* What version of SimpleCache did you use?
 * What did you try to do? ***Please post the relevant parts of your code.***
 * What went wrong? ***Please include error messages, if any.***
 * What was the expected result?
@@ -16,7 +16,7 @@ Bug fixes and general improvements to the existing codebase are always welcome.
 New features are also welcome, but will be judged on an individual basis. If
 you'd rather not risk wasting your time implementing a new feature only to see
 it turned down, please start the discussion by
-[opening an issue](https://github.com/matthiasmullie/scrapbook/issues/new).
+[opening an issue](https://github.com/bkdotcom/SimpleCache/issues/new).
 
 Where applicable, new features should follow the existing model of wrapping them
 around a KeyValueStore object, which is in turn also a KeyValueStore. Like how
@@ -31,7 +31,7 @@ Don't forget to add your changes to the [changelog](CHANGELOG.md).
 
 ### Running the tests
 
-Because Scrapbook supports a wide range of PHP versions and has adapters for a
+Because bdk/SimpleCache supports a wide range of PHP versions and has adapters for a
 good amount of services, testing could be laborious.
 
 Docker images has been created to set up the entire environment, or just a
@@ -81,7 +81,7 @@ To add a new adapter, just add a new *AdapterName*Provider.php file in the
 [tests/Providers](tests/Providers) directory, similar to the existing adapters.
 That file should extend from AdapterProvider, `::getAdapter` should return that
 adapter's KeyValueStore implementation & `__construct` should throw a
-`MatthiasMullie\Scrapbook\Exception\Exception` in case it fails to initialize.
+`bdk\SimpleCache\Exception\Exception` in case it fails to initialize.
 
 There are also adapter-specific tests. Just look at
 [MemoryStoreTest.php](tests/Adapters/MemoryStoreTest.php), for example.
@@ -116,5 +116,5 @@ Document the code thoroughly!
 
 ## License
 
-Note that Scrapbook is MIT-licensed, which basically allows anyone to do
+Note that bdk/SimpleCache is MIT-licensed, which basically allows anyone to do
 anything they like with it, without restriction.

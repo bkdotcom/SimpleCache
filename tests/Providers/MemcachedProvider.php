@@ -1,9 +1,9 @@
 <?php
 
-namespace MatthiasMullie\Scrapbook\Tests\Providers;
+namespace bdk\SimpleCache\Tests\Providers;
 
-use MatthiasMullie\Scrapbook\Exception\Exception;
-use MatthiasMullie\Scrapbook\Tests\AdapterProvider;
+use bdk\SimpleCache\Exception\Exception;
+use bdk\SimpleCache\Tests\AdapterProvider;
 
 class MemcachedProvider extends AdapterProvider
 {
@@ -16,6 +16,6 @@ class MemcachedProvider extends AdapterProvider
         $client = new \Memcached();
         $client->addServer('memcached', '11211');
 
-        parent::__construct(new \MatthiasMullie\Scrapbook\Adapters\Memcached($client));
+        parent::__construct(new \bdk\SimpleCache\Adapters\Memcached($client));
     }
 }

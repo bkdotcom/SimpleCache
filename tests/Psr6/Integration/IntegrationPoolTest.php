@@ -1,14 +1,14 @@
 <?php
 
-namespace MatthiasMullie\Scrapbook\Tests\Psr6\Integration;
+namespace bdk\SimpleCache\Tests\Psr6\Integration;
 
 use Cache\IntegrationTests\CachePoolTest;
-use MatthiasMullie\Scrapbook\Adapters\Couchbase;
-use MatthiasMullie\Scrapbook\Adapters\Collections\Couchbase as CouchbaseCollection;
-use MatthiasMullie\Scrapbook\KeyValueStore;
-use MatthiasMullie\Scrapbook\Psr6\Pool;
-use MatthiasMullie\Scrapbook\Tests\AdapterTestProvider;
-use MatthiasMullie\Scrapbook\Tests\AdapterProviderTestInterface;
+use bdk\SimpleCache\Adapters\Couchbase;
+use bdk\SimpleCache\Adapters\Collections\Couchbase as CouchbaseCollection;
+use bdk\SimpleCache\KeyValueStoreInterface;
+use bdk\SimpleCache\Psr6\Pool;
+use bdk\SimpleCache\Tests\AdapterTestProvider;
+use bdk\SimpleCache\Tests\AdapterProviderTestInterface;
 
 class IntegrationPoolTest extends CachePoolTest implements AdapterProviderTestInterface
 {
@@ -41,14 +41,13 @@ class IntegrationPoolTest extends CachePoolTest implements AdapterProviderTestIn
     public static function suite()
     {
         $provider = new AdapterTestProvider(new static());
-
         return $provider->getSuite();
     }
 
     /**
      * {@inheritdoc}
      */
-    public function setAdapter(KeyValueStore $adapter)
+    public function setAdapter(KeyValueStoreInterface $adapter)
     {
         $this->adapter = $adapter;
     }

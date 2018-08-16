@@ -1,9 +1,9 @@
 <?php
 
-namespace MatthiasMullie\Scrapbook\Tests;
+namespace bdk\SimpleCache\Tests;
 
-use MatthiasMullie\Scrapbook\KeyValueStore;
-use MatthiasMullie\Scrapbook\Exception\Exception;
+use bdk\SimpleCache\KeyValueStoreInterface;
+use bdk\SimpleCache\Exception\Exception;
 
 class AdapterProvider
 {
@@ -18,12 +18,12 @@ class AdapterProvider
     protected $collectionName;
 
     /**
-     * @param KeyValueStore $adapter
+     * @param KeyValueStoreInterface $adapter
      * @param string        $collectionName
      *
      * @throws Exception
      */
-    public function __construct(KeyValueStore $adapter, $collectionName = 'collection')
+    public function __construct(KeyValueStoreInterface $adapter, $collectionName = 'collection')
     {
         $this->adapter = $adapter;
         $this->collectionName = $collectionName;

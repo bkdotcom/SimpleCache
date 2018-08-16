@@ -1,8 +1,8 @@
 <?php
 
-namespace MatthiasMullie\Scrapbook\Psr16;
+namespace bdk\SimpleCache\Psr16;
 
-use MatthiasMullie\Scrapbook\Exception\Exception;
+use bdk\SimpleCache\Exception\Exception;
 
 class InvalidArgumentException extends Exception implements \Psr\SimpleCache\InvalidArgumentException
 {

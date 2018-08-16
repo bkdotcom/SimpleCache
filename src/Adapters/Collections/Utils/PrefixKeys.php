@@ -1,20 +1,18 @@
 <?php
 
-namespace MatthiasMullie\Scrapbook\Adapters\Collections\Utils;
+namespace bdk\SimpleCache\Adapters\Collections\Utils;
 
-use MatthiasMullie\Scrapbook\KeyValueStore;
+use bdk\SimpleCache\KeyValueStoreInterface;
 
 /**
- * @author Matthias Mullie <scrapbook@mullie.eu>
- * @copyright Copyright (c) 2014, Matthias Mullie. All rights reserved
- * @license LICENSE MIT
+ *
  */
-class PrefixKeys implements KeyValueStore
+class PrefixKeys implements KeyValueStoreInterface
 {
     /**
      * @var KeyValueStore
      */
-    protected $cache;
+    protected $kvs;
 
     /**
      * @var string
@@ -22,85 +20,26 @@ class PrefixKeys implements KeyValueStore
     protected $prefix;
 
     /**
-     * @param KeyValueStore $cache
-     * @param string        $prefix
+     * Reflection property
+     *
+     * @var ReflectionProperty
      */
-    public function __construct(KeyValueStore $cache, $prefix)
+    protected $lastGetInfoProp;
+
+    /**
+     * Constructor
+     *
+     * @param KeyValueStoreInterface $kvs    adapter
+     * @param string                 $prefix key prefix
+     */
+    public function __construct(KeyValueStoreInterface $kvs, $prefix)
     {
-        $this->cache = $cache;
+        $this->kvs = $kvs;
         $this->setPrefix($prefix);
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function get($key, &$token = null)
-    {
-        $key = $this->prefix($key);
-
-        return $this->cache->get($key, $token);
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function getMulti(array $keys, array &$tokens = null)
-    {
-        $keys = array_map(array($this, 'prefix'), $keys);
-        $results = $this->cache->getMulti($keys, $tokens);
-        $keys = array_map(array($this, 'unfix'), array_keys($results));
-        $tokens = array_combine($keys, $tokens);
-
-        return array_combine($keys, $results);
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function set($key, $value, $expire = 0)
-    {
-        $key = $this->prefix($key);
-
-        // Note: I have no idea why, but it seems to happen in some cases that
-        // `$value` is `null`, but func_get_arg(1) returns the correct value.
-        // Makes no sense, probably a very obscure edge case, but it happens.
-        // (it didn't seem to happen if `$value` was another variable name...)
-        return $this->cache->set($key, func_get_arg(1), $expire);
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function setMulti(array $items, $expire = 0)
-    {
-        $keys = array_map(array($this, 'prefix'), array_keys($items));
-        $items = array_combine($keys, $items);
-        $results = $this->cache->setMulti($items, $expire);
-        $keys = array_map(array($this, 'unfix'), array_keys($results));
-
-        return array_combine($keys, $results);
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function delete($key)
-    {
-        $key = $this->prefix($key);
-
-        return $this->cache->delete($key);
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function deleteMulti(array $keys)
-    {
-        $keys = array_map(array($this, 'prefix'), $keys);
-        $results = $this->cache->deleteMulti($keys);
-        $keys = array_map(array($this, 'unfix'), array_keys($results));
-
-        return array_combine($keys, $results);
+        // store this so we can update KeyValueStoreInterface::$lastGetInfo (a protected prop) with min overhead
+        $reflectionClass = new \ReflectionClass($this->kvs);
+        $this->lastGetInfoProp = $reflectionClass->getProperty('lastGetInfo');
+        $this->lastGetInfoProp->setAccessible(true);
     }
 
     /**
@@ -109,26 +48,7 @@ class PrefixKeys implements KeyValueStore
     public function add($key, $value, $expire = 0)
     {
         $key = $this->prefix($key);
-
-        // Note: I have no idea why, but it seems to happen in some cases that
-        // `$value` is `null`, but func_get_arg(1) returns the correct value.
-        // Makes no sense, probably a very obscure edge case, but it happens.
-        // (it didn't seem to happen if `$value` was another variable name...)
-        return $this->cache->add($key, func_get_arg(1), $expire);
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function replace($key, $value, $expire = 0)
-    {
-        $key = $this->prefix($key);
-
-        // Note: I have no idea why, but it seems to happen in some cases that
-        // `$value` is `null`, but func_get_arg(1) returns the correct value.
-        // Makes no sense, probably a very obscure edge case, but it happens.
-        // (it didn't seem to happen if `$value` was another variable name...)
-        return $this->cache->replace($key, func_get_arg(1), $expire);
+        return $this->kvs->add($key, $value, $expire);
     }
 
     /**
@@ -137,22 +57,7 @@ class PrefixKeys implements KeyValueStore
     public function cas($token, $key, $value, $expire = 0)
     {
         $key = $this->prefix($key);
-
-        // Note: I have no idea why, but it seems to happen in some cases that
-        // `$value` is `null`, but func_get_arg(2) returns the correct value.
-        // Makes no sense, probably a very obscure edge case, but it happens.
-        // (it didn't seem to happen if `$value` was another variable name...)
-        return $this->cache->cas($token, $key, func_get_arg(2), $expire);
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function increment($key, $offset = 1, $initial = 0, $expire = 0)
-    {
-        $key = $this->prefix($key);
-
-        return $this->cache->increment($key, $offset, $initial, $expire);
+        return $this->kvs->cas($token, $key, $value, $expire);
     }
 
     /**
@@ -161,26 +66,51 @@ class PrefixKeys implements KeyValueStore
     public function decrement($key, $offset = 1, $initial = 0, $expire = 0)
     {
         $key = $this->prefix($key);
-
-        return $this->cache->decrement($key, $offset, $initial, $expire);
+        return $this->kvs->decrement($key, $offset, $initial, $expire);
     }
 
     /**
      * {@inheritdoc}
      */
-    public function touch($key, $expire)
+    public function delete($key)
     {
         $key = $this->prefix($key);
-
-        return $this->cache->touch($key, $expire);
+        return $this->kvs->delete($key);
     }
 
     /**
      * {@inheritdoc}
      */
-    public function flush()
+    public function deleteMultiple(array $keys)
     {
-        return $this->cache->flush();
+        $keysPrefixed = \array_map(array($this, 'prefix'), $keys);
+        $results = $this->kvs->deleteMultiple($keysPrefixed);
+        $keys = \array_map(array($this, 'unfix'), \array_keys($results));
+        return \array_combine($keys, $results);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function clear()
+    {
+        return $this->kvs->clear();
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function get($key, &$token = null)
+    {
+        $return = $this->kvs->get($this->prefix($key), $token);
+        /*
+            KVS only knows of the prefixed key...
+            we want kvs->getInfo() to return the unprefixed key
+        */
+        $info = $this->lastGetInfoProp->getValue($this->kvs);
+        $info['key'] = $key;
+        $this->lastGetInfoProp->setValue($this->kvs, $info);
+        return $return;
     }
 
     /**
@@ -188,19 +118,96 @@ class PrefixKeys implements KeyValueStore
      */
     public function getCollection($name)
     {
-        return $this->cache->getCollection($name);
-    }
-
-    /**
-     * @param string $prefix
-     */
-    protected function setPrefix($prefix)
-    {
-        $this->prefix = $prefix;
+        return $this->kvs->getCollection($name);
     }
 
     /**
      * {@inheritdoc}
+     */
+    public function getInfo()
+    {
+        return $this->kvs->getInfo();
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function getMultiple(array $keys, array &$tokens = null)
+    {
+        $keysPrefixed = \array_map(array($this, 'prefix'), $keys);
+        $results = $this->kvs->getMultiple($keysPrefixed, $tokens);
+        $keys = \array_map(array($this, 'unfix'), \array_keys($results));
+        $tokens = \array_combine($keys, $tokens);
+        return \array_combine($keys, $results);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function getSet($key, callable $getter, $expire = 0, $failDelay = 60)
+    {
+        $key = $this->prefix($key);
+        return $this->kvs->getSet($key, $getter, $expire, $failDelay);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function increment($key, $offset = 1, $initial = 0, $expire = 0)
+    {
+        $key = $this->prefix($key);
+        return $this->kvs->increment($key, $offset, $initial, $expire);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    /*
+    public function replace($key, $value, $expire = 0)
+    {
+        $key = $this->prefix($key);
+        return $this->kvs->replace($key, $value, $expire);
+    }
+    */
+
+    /**
+     * {@inheritdoc}
+     */
+    public function set($key, $value, $expire = 0)
+    {
+        $key = $this->prefix($key);
+        return $this->kvs->set($key, $value, $expire);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function setMultiple(array $items, $expire = 0)
+    {
+        $keysPrefixed = \array_map(array($this, 'prefix'), \array_keys($items));
+        $items = \array_combine($keysPrefixed, $items);
+        $results = $this->kvs->setMultiple($items, $expire);
+        $keys = \array_map(array($this, 'unfix'), \array_keys($results));
+        return \array_combine($keys, $results);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    /*
+    public function touch($key, $expire)
+    {
+        $key = $this->prefix($key);
+        return $this->kvs->touch($key, $expire);
+    }
+    */
+
+    /**
+     * add prefix to key
+     *
+     * @param string $key key to prefix
+     *
+     * @return string
      */
     protected function prefix($key)
     {
@@ -208,10 +215,26 @@ class PrefixKeys implements KeyValueStore
     }
 
     /**
-     * {@inheritdoc}
+     * set prefix
+     *
+     * @param string $prefix prefix
+     *
+     * @return void
+     */
+    protected function setPrefix($prefix)
+    {
+        $this->prefix = $prefix;
+    }
+
+    /**
+     * remove prefix
+     *
+     * @param string $key key to remove prefix from
+     *
+     * @return string
      */
     protected function unfix($key)
     {
-        return preg_replace('/^'.preg_quote($this->prefix, '/').'/', '', $key);
+        return \preg_replace('/^'.\preg_quote($this->prefix, '/').'/', '', $key);
     }
 }

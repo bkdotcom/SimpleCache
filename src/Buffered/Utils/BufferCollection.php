@@ -2,16 +2,12 @@
 
 namespace MatthiasMullie\Scrapbook\Buffered\Utils;
 
-use MatthiasMullie\Scrapbook\Adapters\Collections\MemoryStore as MemoryStoreCollection;
+use bdk\SimpleCache\Adapters\Collections\Memory as MemoryCollection;
 
 /**
  * A collection implementation for Buffer.
- *
- * @author Matthias Mullie <scrapbook@mullie.eu>
- * @copyright Copyright (c) 2014, Matthias Mullie. All rights reserved
- * @license LICENSE MIT
  */
-class BufferCollection extends MemoryStoreCollection
+class BufferCollection extends MemoryCollection
 {
     /**
      * @var Buffer
@@ -19,8 +15,8 @@ class BufferCollection extends MemoryStoreCollection
     protected $cache;
 
     /**
-     * @param Buffer $cache
-     * @param string $name
+     * @param Buffer $cache Buffer Instance
+     * @param string $name  Name of buffer
      */
     public function __construct(Buffer $cache, $name)
     {
@@ -37,9 +33,9 @@ class BufferCollection extends MemoryStoreCollection
      * uncommitted write)
      * So we'll want to know when a value is in local cache, but expired!
      *
-     * @param string $key
+     * @param string $key key to check
      *
-     * @return bool
+     * @return boolean
      */
     public function expired($key)
     {

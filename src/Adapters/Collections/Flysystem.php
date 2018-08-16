@@ -1,17 +1,13 @@
 <?php
 
-namespace MatthiasMullie\Scrapbook\Adapters\Collections;
+namespace bdk\SimpleCache\Adapters\Collections;
 
 use League\Flysystem\FileNotFoundException;
 use League\Flysystem\Filesystem;
-use MatthiasMullie\Scrapbook\Adapters\Flysystem as Adapter;
+use bdk\SimpleCache\Adapters\Flysystem as Adapter;
 
 /**
  * Flysystem adapter for a subset of data, in a subfolder.
- *
- * @author Matthias Mullie <scrapbook@mullie.eu>
- * @copyright Copyright (c) 2014, Matthias Mullie. All rights reserved
- * @license LICENSE MIT
  */
 class Flysystem extends Adapter
 {
@@ -33,7 +29,7 @@ class Flysystem extends Adapter
     /**
      * {@inheritdoc}
      */
-    public function flush()
+    public function clear()
     {
         $files = $this->filesystem->listContents($this->collection);
         foreach ($files as $file) {

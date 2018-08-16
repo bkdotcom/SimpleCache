@@ -1,9 +1,9 @@
 <?php
 
-namespace MatthiasMullie\Scrapbook\Tests\Providers;
+namespace bdk\SimpleCache\Tests\Providers;
 
-use MatthiasMullie\Scrapbook\Exception\Exception;
-use MatthiasMullie\Scrapbook\Tests\AdapterProvider;
+use bdk\SimpleCache\Exception\Exception;
+use bdk\SimpleCache\Tests\AdapterProvider;
 
 class RedisProvider extends AdapterProvider
 {
@@ -17,6 +17,6 @@ class RedisProvider extends AdapterProvider
         $client->connect('redis', '6379');
 
         // Redis databases are numeric
-        parent::__construct(new \MatthiasMullie\Scrapbook\Adapters\Redis($client), 1);
+        parent::__construct(new \bdk\SimpleCache\Adapters\Redis($client), 1);
     }
 }

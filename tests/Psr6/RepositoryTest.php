@@ -1,8 +1,8 @@
 <?php
 
-namespace MatthiasMullie\Scrapbook\Tests\Psr6;
+namespace bdk\SimpleCache\Tests\Psr6;
 
-use MatthiasMullie\Scrapbook\Psr6\Pool;
+use bdk\SimpleCache\Psr6\Pool;
 use ReflectionObject;
 
 class RepositoryTest extends Psr6TestCase

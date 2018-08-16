@@ -1,6 +1,6 @@
 <?php
 
-namespace MatthiasMullie\Scrapbook\Tests\Psr6;
+namespace bdk\SimpleCache\Tests\Psr6;
 
 class ItemTest extends Psr6TestCase
 {

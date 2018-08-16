@@ -1,40 +1,44 @@
 <?php
 
-namespace MatthiasMullie\Scrapbook\Adapters\Collections\Utils;
+namespace bdk\SimpleCache\Adapters\Collections\Utils;
 
-use MatthiasMullie\Scrapbook\KeyValueStore;
+use bdk\SimpleCache\KeyValueStoreInterface;
 
 /**
- * @author Matthias Mullie <scrapbook@mullie.eu>
- * @copyright Copyright (c) 2014, Matthias Mullie. All rights reserved
- * @license LICENSE MIT
+ *
  */
 class PrefixReset extends PrefixKeys
 {
     /**
      * @var string
      */
-    protected $collection;
+    protected $collectionName;
 
     /**
-     * @param KeyValueStore $cache
-     * @param string        $name
+     * Constructor
+     *
+     * @param KeyValueStoreInterface $kvs  KeyValueStoreInterface instance
+     * @param string                 $name collection name
      */
-    public function __construct(KeyValueStore $cache, $name)
+    public function __construct(KeyValueStoreInterface $kvs, $name)
     {
-        $this->cache = $cache;
-        $this->collection = $name;
-        parent::__construct($cache, $this->getPrefix());
+        $this->kvs = $kvs;
+        $this->collectionName = $name;
+        parent::__construct($kvs, $this->getPrefix());
     }
 
     /**
      * {@inheritdoc}
      */
-    public function flush()
+    public function clear()
     {
-        $index = $this->cache->increment($this->collection);
-        $this->setPrefix($this->collection.':'.$index.':');
-
+        /*
+            This implementation kinda blows
+            we're not flushing.. we're starting a new collection
+            any values without expiry will linger...
+        */
+        $index = $this->kvs->increment($this->collectionName);
+        $this->setPrefix($this->collectionName.':'.$index.':');
         return $index !== false;
     }
 
@@ -44,17 +48,15 @@ class PrefixReset extends PrefixKeys
     protected function getPrefix()
     {
         /*
-         * It's easy enough to just set a prefix to be used, but we can not
-         * flush only a prefix!
-         * Instead, we'll generate a unique prefix key, based on some name.
-         * If we want to flush, we just create a new prefix and use that one.
-         */
-        $index = $this->cache->get($this->collection);
-
+            It's easy enough to just set a prefix to be used,
+            but we can not flush only a prefix!
+            Instead, we'll generate a unique prefix key, based on some name.
+            If we want to flush, we just create a new prefix and use that one.
+        */
+        $index = $this->kvs->get($this->collectionName);
         if ($index === false) {
-            $index = $this->cache->set($this->collection, 1);
+            $index = $this->kvs->set($this->collectionName, 1);
         }
-
-        return $this->collection.':'.$index.':';
+        return $this->collectionName.':'.$index.':';
     }
 }

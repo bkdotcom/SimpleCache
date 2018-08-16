@@ -1,24 +1,21 @@
 <?php
 
-namespace MatthiasMullie\Scrapbook\Adapters;
+namespace bdk\SimpleCache\Adapters;
 
 use League\Flysystem\FileNotFoundException;
 use League\Flysystem\FileExistsException;
-use League\Flysystem\Filesystem;
-use MatthiasMullie\Scrapbook\Adapters\Collections\Flysystem as Collection;
-use MatthiasMullie\Scrapbook\KeyValueStore;
+use League\Flysystem\Filesystem as FlyFilesystem;   // PHP bug 66773 ??
+use bdk\SimpleCache\Adapters\Collections\Flysystem as Collection;
 
 /**
  * Flysystem adapter. Data will be written to League\Flysystem\Filesystem.
  *
- * Flysystem doesn't allow locking files, though. To guarantee interference from
+ * Not all flysystem adapters support locking files.  To guarantee no interference with
  * other processes, we'll create separate lock-files to flag a cache key in use.
  *
- * @author Matthias Mullie <scrapbook@mullie.eu>
- * @copyright Copyright (c) 2014, Matthias Mullie. All rights reserved
- * @license LICENSE MIT
+ * @see https://flysystem.thephpleague.com/
  */
-class Flysystem implements KeyValueStore
+class Flysystem extends Base
 {
     /**
      * @var Filesystem
@@ -28,128 +25,9 @@ class Flysystem implements KeyValueStore
     /**
      * @param Filesystem $filesystem
      */
-    public function __construct(Filesystem $filesystem)
+    public function __construct(FlyFilesystem $filesystem)
     {
         $this->filesystem = $filesystem;
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function get($key, &$token = null)
-    {
-        $token = null;
-
-        // let expired-but-not-yet-deleted files be deleted first
-        if (!$this->exists($key)) {
-            return false;
-        }
-
-        $data = $this->read($key);
-        if ($data === false) {
-            return false;
-        }
-
-        $value = unserialize($data[1]);
-        $token = $data[1];
-
-        return $value;
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function getMulti(array $keys, array &$tokens = null)
-    {
-        $results = array();
-        $tokens = array();
-        foreach ($keys as $key) {
-            $token = null;
-            $value = $this->get($key, $token);
-
-            if ($token !== null) {
-                $results[$key] = $value;
-                $tokens[$key] = $token;
-            }
-        }
-
-        return $results;
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function set($key, $value, $expire = 0)
-    {
-        // we don't really need a lock for this operation, but we need to make
-        // sure it's not locked by another operation, which we could overwrite
-        if (!$this->lock($key)) {
-            return false;
-        }
-
-        $expire = $this->normalizeTime($expire);
-        if ($expire !== 0 && $expire < time()) {
-            $this->unlock($key);
-
-            // don't waste time storing (and later comparing expiration
-            // timestamp) data that is already expired; just delete it already
-            return !$this->exists($key) || $this->delete($key);
-        }
-
-        $path = $this->path($key);
-        $data = $this->wrap($value, $expire);
-        $success = $this->filesystem->put($path, $data);
-
-        return $success !== false && $this->unlock($key);
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function setMulti(array $items, $expire = 0)
-    {
-        $success = array();
-        foreach ($items as $key => $value) {
-            $success[$key] = $this->set($key, $value, $expire);
-        }
-
-        return $success;
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function delete($key)
-    {
-        if (!$this->lock($key)) {
-            return false;
-        }
-
-        $path = $this->path($key);
-
-        try {
-            $this->filesystem->delete($path);
-            $this->unlock($key);
-
-            return true;
-        } catch (FileNotFoundException $e) {
-            $this->unlock($key);
-
-            return false;
-        }
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function deleteMulti(array $keys)
-    {
-        $success = array();
-        foreach ($keys as $key) {
-            $success[$key] = $this->delete($key);
-        }
-
-        return $success;
     }
 
     /**
@@ -160,52 +38,29 @@ class Flysystem implements KeyValueStore
         if (!$this->lock($key)) {
             return false;
         }
-
-        if ($this->exists($key)) {
+        $expire = $this->expiry($expire);
+        $isExisting = $this->exists($key);
+        if ($expire !== 0 && $expire < time()) {
+            // adding an expired value??
+            // just delete it now and be done with it
             $this->unlock($key);
-
+            return !$isExisting || $this->delete($key);
+        }
+        if ($isExisting) {
+            $this->unlock($key);
             return false;
         }
-
         $path = $this->path($key);
-        $data = $this->wrap($value, $expire);
-
+        $meta = array(
+            'e' => $expire,
+            // 'eo' => $expire,
+            'ct' => null,
+        );
         try {
-            $success = $this->filesystem->write($path, $data);
-
+            $success = $this->filesystem->write($path, $this->encode($value, $meta));
             return $success && $this->unlock($key);
         } catch (FileExistsException $e) {
             $this->unlock($key);
-
-            return false;
-        }
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function replace($key, $value, $expire = 0)
-    {
-        if (!$this->lock($key)) {
-            return false;
-        }
-
-        if (!$this->exists($key)) {
-            $this->unlock($key);
-
-            return false;
-        }
-
-        $path = $this->path($key);
-        $data = $this->wrap($value, $expire);
-
-        try {
-            $success = $this->filesystem->update($path, $data);
-
-            return $success && $this->unlock($key);
-        } catch (FileNotFoundException $e) {
-            $this->unlock($key);
-
             return false;
         }
     }
@@ -218,24 +73,29 @@ class Flysystem implements KeyValueStore
         if (!$this->lock($key)) {
             return false;
         }
-
-        $current = $this->get($key);
-        if ($token !== serialize($current)) {
+        $this->get($key);
+        if ($this->lastGetInfo['code'] == 'hit' && $token !== $this->lastGetInfo['token']) {
             $this->unlock($key);
-
             return false;
         }
-
+        $expire = $this->expiry($expire);
+        if ($expire !== 0 && $expire < time()) {
+            // setting an expired value??
+            // just delete it now and be done with it
+            $this->unlock($key);
+            return $this->lastGetInfo['code'] != 'hit' || $this->delete($key);
+        }
         $path = $this->path($key);
-        $data = $this->wrap($value, $expire);
-
+        $meta = array(
+            'e' => $expire,
+            // 'eo' => $this->lastGetInfo['expiryOriginal'],
+            'ct' => (microtime(true) - $this->lastGetInfo['microtime']) * 1000000,
+        );
         try {
-            $success = $this->filesystem->update($path, $data);
-
+            $success = $this->filesystem->put($path, $this->encode($value, $meta));
             return $success && $this->unlock($key);
         } catch (FileNotFoundException $e) {
             $this->unlock($key);
-
             return false;
         }
     }
@@ -243,61 +103,7 @@ class Flysystem implements KeyValueStore
     /**
      * {@inheritdoc}
      */
-    public function increment($key, $offset = 1, $initial = 0, $expire = 0)
-    {
-        if ($offset <= 0 || $initial < 0) {
-            return false;
-        }
-
-        return $this->doIncrement($key, $offset, $initial, $expire);
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function decrement($key, $offset = 1, $initial = 0, $expire = 0)
-    {
-        if ($offset <= 0 || $initial < 0) {
-            return false;
-        }
-
-        return $this->doIncrement($key, -$offset, $initial, $expire);
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function touch($key, $expire)
-    {
-        if (!$this->lock($key)) {
-            return false;
-        }
-
-        $value = $this->get($key);
-        if ($value === false) {
-            $this->unlock($key);
-
-            return false;
-        }
-
-        $path = $this->path($key);
-        $data = $this->wrap($value, $expire);
-
-        try {
-            $success = $this->filesystem->update($path, $data);
-
-            return $success && $this->unlock($key);
-        } catch (FileNotFoundException $e) {
-            $this->unlock($key);
-
-            return false;
-        }
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function flush()
+    public function clear()
     {
         $files = $this->filesystem->listContents();
         foreach ($files as $file) {
@@ -312,8 +118,55 @@ class Flysystem implements KeyValueStore
                 // been deleted by another process in the meantime...
             }
         }
-
         return true;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function delete($key)
+    {
+        if (!$this->lock($key)) {
+            return false;
+        }
+        $path = $this->path($key);
+        try {
+            $this->filesystem->delete($path);
+            $this->unlock($key);
+            return true;
+        } catch (FileNotFoundException $e) {
+            $this->unlock($key);
+            return false;
+        }
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function get($key, &$token = null)
+    {
+        $token = null;
+        $data = $this->read($key);
+        $this->resetLastGetInfo($key);
+        if ($data === false) {
+            return false;
+        }
+        $rand = mt_rand() / mt_getrandmax();    // random float between 0 and 1 inclusive
+        $isExpired = $data['e'] && $data['e'] < microtime(true) - $data['ct']/1000000 * log($rand);
+        $this->lastGetInfo = array_merge($this->lastGetInfo, array(
+            'calcTime' => $data['ct'],
+            'code' => 'hit',
+            'expiry' => $data['e'],
+            // 'expiryOriginal' => $data['eo'],
+            'token' => $data['t'],
+        ));
+        if ($isExpired) {
+            $this->lastGetInfo['code'] = 'expired';
+            $this->lastGetInfo['expiredValue'] = $data['v'];
+            return false;
+        }
+        $token = $data['t'];
+        return $data['v'];
     }
 
     /**
@@ -321,59 +174,141 @@ class Flysystem implements KeyValueStore
      */
     public function getCollection($name)
     {
-        /*
-         * A better solution could be to simply construct a new object for a
-         * subfolder, but we can't reliably create a new
-         * `League\Flysystem\Filesystem` object for a subfolder from the
-         * `$this->filesystem` object we have. I could `->getAdapter` and fetch
-         * the path from there, but only if we can assume that the adapter is
-         * `League\Flysystem\Adapter\Local`, which it may not be.
-         * But I can just create a new object that changes the path to write at,
-         * by prefixing it with a subfolder!
-         */
         $this->filesystem->createDir($name);
-
         return new Collection($this->filesystem, $name);
     }
 
     /**
-     * Shared between increment/decrement: both have mostly the same logic
-     * (decrement just increments a negative value), but need their validation
-     * split up (increment won't accept negative values).
-     *
-     * @param string $key
-     * @param int    $offset
-     * @param int    $initial
-     * @param int    $expire
-     *
-     * @return int|bool
+     * {@inheritdoc}
      */
-    protected function doIncrement($key, $offset, $initial, $expire)
+    /*
+    public function replace($key, $value, $expire = 0)
     {
-        $current = $this->get($key, $token);
-        if ($current === false) {
-            $success = $this->add($key, $initial, $expire);
-
-            return $success ? $initial : false;
-        }
-
-        // NaN, doesn't compute
-        if (!is_numeric($current)) {
+        if (!$this->lock($key)) {
             return false;
         }
+        if (!$this->exists($key)) {
+            $this->unlock($key);
+            return false;
+        }
+        $path = $this->path($key);
+        $meta = array(
+            'expire' => $expire,
+        );
+        try {
+            $success = $this->filesystem->update($path, $this->encode($value, $meta));
+            return $success && $this->unlock($key);
+        } catch (FileNotFoundException $e) {
+            $this->unlock($key);
+            return false;
+        }
+    }
+    */
 
-        $value = $current + $offset;
-        $value = max(0, $value);
-
-        $success = $this->cas($token, $key, $value, $expire);
-
-        return $success ? $value : false;
+    /**
+     * {@inheritdoc}
+     */
+    public function set($key, $value, $expire = 0)
+    {
+        // we don't really need a lock for this operation, but we need to make
+        // sure it's not locked by another operation, which we could overwrite
+        if (!$this->lock($key)) {
+            return false;
+        }
+        $expire = $this->expiry($expire);
+        if ($expire !== 0 && $expire < time()) {
+            $this->unlock($key);
+            // setting an expired value??
+            // just delete it now and be done with it
+            return !$this->exists($key) || $this->delete($key);
+        }
+        $path = $this->path($key);
+        $meta = array(
+            'e' => $expire,
+            // 'eo' => $this->lastGetInfo['key'] == $key
+                // ? $this->lastGetInfo['expiryOriginal']
+                // : null,
+            'ct' => $this->lastGetInfo['key'] == $key
+                ? (microtime(true) - $this->lastGetInfo['microtime']) * 1000000
+                : null,
+        );
+        $success = $this->filesystem->put($path, $this->encode($value, $meta));
+        return $success !== false && $this->unlock($key);
     }
 
     /**
-     * @param string $key
+     * {@inheritdoc}
+     */
+    /*
+    public function touch($key, $expire)
+    {
+        if (!$this->lock($key)) {
+            return false;
+        }
+        $value = $this->get($key);
+        if ($value === false) {
+            $this->unlock($key);
+            return false;
+        }
+        $path = $this->path($key);
+        $meta = array(
+            'expire' => $expire,
+        );
+        try {
+            $success = $this->filesystem->update($path, $this->encode($value, $meta));
+            return $success && $this->unlock($key);
+        } catch (FileNotFoundException $e) {
+            $this->unlock($key);
+            return false;
+        }
+    }
+    */
+
+    /*
+        Protected/internal
+    */
+
+    /**
+     * decode value & metadata
      *
-     * @return bool
+     * @param string $data meta + data string
+     *
+     * @return array
+     */
+    /*
+    protected function decode($data)
+    {
+        $data = explode("\x1D", $data, 2); // \x1D = "Group Separator
+        // $data[0] is meta, $data[1] is value (serialized)
+        return array_merge(unserialize($data[0]), array(
+            'token' => md5($data[1]),
+            'value' => unserialize($data[1]),
+        ));
+    }
+    */
+
+    /**
+     * Build value, token & expiration time to be stored in cache file.
+     *
+     * @param string $value value to store
+     * @param array  $meta  meta information including expire
+     *
+     * @return string
+     */
+    /*
+    protected function encode($value, $meta = array())
+    {
+        $meta['expire'] = $this->expiry($meta['expire']);
+        return serialize($meta)."\x1D".serialize($value);  // \x1D = "Group Separator
+    }
+    */
+
+    /**
+     * Check if exists and not expired
+     *
+     * @param string $key key to check
+     *
+     * @return boolean
      */
     protected function exists($key)
     {
@@ -381,16 +316,13 @@ class Flysystem implements KeyValueStore
         if ($data === false) {
             return false;
         }
-
-        $expire = $data[0];
+        $expire = $data['e'];
         if ($expire !== 0 && $expire < time()) {
             // expired, don't keep it around
             $path = $this->path($key);
             $this->filesystem->delete($path);
-
             return false;
         }
-
         return true;
     }
 
@@ -399,95 +331,42 @@ class Flysystem implements KeyValueStore
      * It'll try to get a lock for a couple of times, but ultimately give up if
      * no lock can be obtained in a reasonable time.
      *
-     * @param string $key
+     * @param string $key key to lock
      *
-     * @return bool
+     * @return boolean
      */
     protected function lock($key)
     {
         $path = $key.'.lock';
-
         for ($i = 0; $i < 25; ++$i) {
             try {
                 $this->filesystem->write($path, '');
-
                 return true;
             } catch (FileExistsException $e) {
                 usleep(200);
             }
         }
-
         return false;
     }
 
     /**
-     * Release the lock for a given key.
+     * Get filepath for given key
      *
-     * @param string $key
-     *
-     * @return bool
-     */
-    protected function unlock($key)
-    {
-        $path = $key.'.lock';
-        try {
-            $this->filesystem->delete($path);
-        } catch (FileNotFoundException $e) {
-            return false;
-        }
-
-        return true;
-    }
-
-    /**
-     * Times can be:
-     * * relative (in seconds) to current time, within 30 days
-     * * absolute unix timestamp
-     * * 0, for infinity.
-     *
-     * The first case (relative time) will be normalized into a fixed absolute
-     * timestamp.
-     *
-     * @param int $time
-     *
-     * @return int
-     */
-    protected function normalizeTime($time)
-    {
-        // 0 = infinity
-        if (!$time) {
-            return 0;
-        }
-
-        // relative time in seconds, <30 days
-        if ($time < 30 * 24 * 60 * 60) {
-            $time += time();
-        }
-
-        return $time;
-    }
-
-    /**
-     * Build value, token & expiration time to be stored in cache file.
-     *
-     * @param string $value
-     * @param int    $expire
+     * @param string $key cache key
      *
      * @return string
      */
-    protected function wrap($value, $expire)
+    protected function path($key)
     {
-        $expire = $this->normalizeTime($expire);
-
-        return $expire."\n".serialize($value);
+        return $key.'.cache';
     }
 
     /**
      * Fetch stored data from cache file.
      *
-     * @param string $key
+     * @param string $key cache key
      *
-     * @return bool|array
+     * @return boolean|array
      */
     protected function read($key)
     {
@@ -499,27 +378,30 @@ class Flysystem implements KeyValueStore
             // (outside process may have removed it since)
             return false;
         }
-
         if ($data === false) {
             // in theory, a file could still be deleted between Flysystem's
             // assertPresent & the time it actually fetched the content
             // extremely unlikely though
             return false;
         }
-
-        $data = explode("\n", $data, 2);
-        $data[0] = (int) $data[0];
-
-        return $data;
+        return $this->decode($data);
     }
 
     /**
-     * @param string $key
+     * Release the lock for a given key.
      *
-     * @return string
+     * @param string $key key to unlock
+     *
+     * @return boolean
      */
-    protected function path($key)
+    protected function unlock($key)
     {
-        return $key.'.cache';
+        $path = $key.'.lock';
+        try {
+            $this->filesystem->delete($path);
+        } catch (FileNotFoundException $e) {
+            return false;
+        }
+        return true;
     }
 }

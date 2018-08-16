@@ -2,7 +2,20 @@
 
 namespace
 {
-    require __DIR__.'/../vendor/autoload.php';
+
+    // find autoload
+    $curdir = isset($_SERVER['PWD']) ? $_SERVER['PWD'] : __DIR__;
+    foreach (array(
+        __DIR__.'/../vendor/autoload.php',
+        // __DIR__.'/../../vendor/autoload.php',
+        __DIR__.'/../../autoload.php',
+    ) as $filepath) {
+        // $filepath = get_absolute_path($filepath);
+        if (file_exists($filepath)) {
+            require $filepath;
+            break;
+        }
+    }
 
     // compatibility for when cache/integration-tests are run with PHPUnit>=6.0
     if (!class_exists('PHPUnit_Framework_TestCase')) {

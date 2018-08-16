@@ -1,11 +1,9 @@
 <?php
 
-namespace MatthiasMullie\Scrapbook\Tests\Psr16;
+namespace bdk\SimpleCache\Tests\Psr16;
 
 use ArrayIterator;
 use DateInterval;
-use MatthiasMullie\Scrapbook\Adapters\Couchbase;
-use MatthiasMullie\Scrapbook\Adapters\Collections\Couchbase as CouchbaseCollection;
 
 class SimpleCacheTest extends Psr16TestCase
 {
@@ -61,29 +59,24 @@ class SimpleCacheTest extends Psr16TestCase
         $interval = new DateInterval('PT1S');
         $interval->invert = 1;
         $success = $this->simplecache->set('key2', 'value', $interval);
-        $this->assertSame(true, $success);
+        $this->assertTrue($success);
 
         // check both cache & simplecache interface to confirm delete
-        $this->assertSame(false, $this->cache->get('key'));
-        $this->assertSame(null, $this->simplecache->get('key'));
-        $this->assertSame(false, $this->cache->get('key2'));
-        $this->assertSame(null, $this->simplecache->get('key2'));
+        $this->assertFalse($this->cache->get('key'), get_class($this->cache));
+        $this->assertNull($this->simplecache->get('key'));
+        $this->assertFalse($this->cache->get('key2'));
+        $this->assertNull($this->simplecache->get('key2'));
     }
 
     public function testSetFutureExpire()
     {
-        $success = $this->simplecache->set('key', 'value', 2);
+        $success = $this->simplecache->set('key', 'value', 1);
         $this->assertSame(true, $success);
 
-        $success = $this->simplecache->set('key2', 'value', new DateInterval('PT2S'));
+        $success = $this->simplecache->set('key2', 'value', new DateInterval('PT1S'));
         $this->assertSame(true, $success);
 
-        sleep(3);
-
-        // Couchbase TTL can't be relied on with 1 second precision = sleep more
-        if ($this->cache instanceof Couchbase || $this->cache instanceof CouchbaseCollection) {
-            sleep(2);
-        }
+        sleep(2);
 
         // check both cache & simplecache interface to confirm expire
         $this->assertSame(false, $this->cache->get('key'));
@@ -132,7 +125,7 @@ class SimpleCacheTest extends Psr16TestCase
 
     public function testGetMultiple()
     {
-        $this->cache->setMulti(array('key' => 'value', 'key2' => 'value'));
+        $this->cache->setMultiple(array('key' => 'value', 'key2' => 'value'));
         $results = $this->simplecache->getMultiple(array('key', 'key2', 'key3'));
         $this->assertSame(array('key' => 'value', 'key2' => 'value', 'key3' => null), $results);
     }
@@ -144,7 +137,7 @@ class SimpleCacheTest extends Psr16TestCase
 
     public function testGetMultipleTraversable()
     {
-        $this->cache->setMulti(array('key' => 'value', 'key2' => 'value'));
+        $this->cache->setMultiple(array('key' => 'value', 'key2' => 'value'));
         $iterator = new ArrayIterator(array('key', 'key2', 'key3'));
         $results = $this->simplecache->getMultiple($iterator);
         $this->assertSame(array('key' => 'value', 'key2' => 'value', 'key3' => null), $results);
@@ -163,7 +156,7 @@ class SimpleCacheTest extends Psr16TestCase
         $success = $this->simplecache->setMultiple(array('key' => 'value', 'key2' => 'value'));
         $this->assertSame(true, $success);
 
-        $results = $this->cache->getMulti(array('key', 'key2'));
+        $results = $this->cache->getMultiple(array('key', 'key2'));
         $this->assertSame(array('key' => 'value', 'key2' => 'value'), $results);
     }
 
@@ -173,7 +166,7 @@ class SimpleCacheTest extends Psr16TestCase
         $success = $this->simplecache->setMultiple($iterator);
         $this->assertSame(true, $success);
 
-        $results = $this->cache->getMulti(array('key', 'key2'));
+        $results = $this->cache->getMultiple(array('key', 'key2'));
         $this->assertSame(array('key' => 'value', 'key2' => 'value'), $results);
     }
 
@@ -187,19 +180,19 @@ class SimpleCacheTest extends Psr16TestCase
 
     public function testDeleteMultiple()
     {
-        $this->cache->setMulti(array('key' => 'value', 'key2' => 'value'));
+        $this->cache->setMultiple(array('key' => 'value', 'key2' => 'value'));
         $success = $this->simplecache->deleteMultiple(array('key', 'key2'));
         $this->assertSame(true, $success);
-        $this->assertSame(array(), $this->cache->getMulti(array('key', 'key2')));
+        $this->assertSame(array(), $this->cache->getMultiple(array('key', 'key2')));
     }
 
     public function testDeleteMultipleTraversable()
     {
-        $this->cache->setMulti(array('key' => 'value', 'key2' => 'value'));
+        $this->cache->setMultiple(array('key' => 'value', 'key2' => 'value'));
         $iterator = new ArrayIterator(array('key', 'key2'));
         $success = $this->simplecache->deleteMultiple($iterator);
         $this->assertSame(true, $success);
-        $this->assertSame(array(), $this->cache->getMulti(array('key', 'key2')));
+        $this->assertSame(array(), $this->cache->getMultiple(array('key', 'key2')));
     }
 
     /**

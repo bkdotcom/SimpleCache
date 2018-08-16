@@ -1,11 +1,11 @@
 <?php
 
-namespace MatthiasMullie\Scrapbook\Tests\Providers;
+namespace bdk\SimpleCache\Tests\Providers;
 
 use League\Flysystem\Adapter\Local;
 use League\Flysystem\Filesystem;
-use MatthiasMullie\Scrapbook\Exception\Exception;
-use MatthiasMullie\Scrapbook\Tests\AdapterProvider;
+use bdk\SimpleCache\Exception\Exception;
+use bdk\SimpleCache\Tests\AdapterProvider;
 
 class FlysystemProvider extends AdapterProvider
 {
@@ -24,6 +24,6 @@ class FlysystemProvider extends AdapterProvider
         $adapter = new Local($path, LOCK_EX);
         $filesystem = new Filesystem($adapter);
 
-        parent::__construct(new \MatthiasMullie\Scrapbook\Adapters\Flysystem($filesystem));
+        parent::__construct(new \bdk\SimpleCache\Adapters\Flysystem($filesystem));
     }
 }

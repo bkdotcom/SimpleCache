@@ -1,10 +1,10 @@
 <?php
 
-namespace MatthiasMullie\Scrapbook\Tests\Psr16;
+namespace bdk\SimpleCache\Tests\Psr16;
 
-use MatthiasMullie\Scrapbook\KeyValueStore;
-use MatthiasMullie\Scrapbook\Psr16\SimpleCache;
-use MatthiasMullie\Scrapbook\Tests\AdapterTestCase;
+use bdk\SimpleCache\KeyValueStoreInterface;
+use bdk\SimpleCache\SimpleCache;
+use bdk\SimpleCache\Tests\AdapterTestCase;
 
 class Psr16TestCase extends AdapterTestCase
 {
@@ -13,7 +13,7 @@ class Psr16TestCase extends AdapterTestCase
      */
     protected $simplecache;
 
-    public function setAdapter(KeyValueStore $adapter)
+    public function setAdapter(KeyValueStoreInterface $adapter)
     {
         $this->cache = $adapter;
         $this->simplecache = new SimpleCache($adapter);

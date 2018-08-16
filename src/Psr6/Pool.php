@@ -1,18 +1,14 @@
 <?php
 
-namespace MatthiasMullie\Scrapbook\Psr6;
+namespace bdk\SimpleCache\Psr6;
 
 use Psr\Cache\CacheItemInterface;
 use Psr\Cache\CacheItemPoolInterface;
-use MatthiasMullie\Scrapbook\KeyValueStore;
+use bdk\SimpleCache\KeyValueStoreInterface;
 
 /**
  * Representation of the cache storage, which lets you read items from, and add
  * values to the cache.
- *
- * @author Matthias Mullie <scrapbook@mullie.eu>
- * @copyright Copyright (c) 2014, Matthias Mullie. All rights reserved
- * @license LICENSE MIT
  */
 class Pool implements CacheItemPoolInterface
 {
@@ -39,14 +35,17 @@ class Pool implements CacheItemPoolInterface
     protected $deferred = array();
 
     /**
-     * @param KeyValueStore $store
+     * @param KeyValueStoreInterface $store KeyValueStoreInterface instance
      */
-    public function __construct(KeyValueStore $store)
+    public function __construct(KeyValueStoreInterface $store)
     {
         $this->store = $store;
         $this->repository = new Repository($store);
     }
 
+    /**
+     * Destructor magic method
+     */
     public function __destruct()
     {
         // make sure all deferred items are actually saved
@@ -61,24 +60,21 @@ class Pool implements CacheItemPoolInterface
         $this->assertValidKey($key);
         if (array_key_exists($key, $this->deferred)) {
             /*
-             * In theory, we could request & change a deferred value. In the
-             * case of objects, we'll clone them to make sure that when the
-             * value for 1 item is manipulated, it doesn't affect the value of
-             * the one about to be stored to cache (because those objects would
-             * be passed by-ref without the cloning)
-             */
+                In theory, we could request & change a deferred value. In the
+                case of objects, we'll clone them to make sure that when the
+                value for 1 item is manipulated, it doesn't affect the value of
+                the one about to be stored to cache (because those objects would
+                be passed by-ref without the cloning)
+            */
             $value = $this->deferred[$key];
             $item = is_object($value) ? clone $value : $value;
-
             /*
-             * Deferred items should identify as being hit, unless if expired:
-             * @see https://groups.google.com/forum/?fromgroups#!topic/php-fig/pxy_VYgm2sU
-             */
+                Deferred items should identify as being hit, unless if expired:
+                @see https://groups.google.com/forum/?fromgroups#!topic/php-fig/pxy_VYgm2sU
+            */
             $item->overrideIsHit(!$item->isExpired());
-
             return $item;
         }
-
         // return a stub object - the real call to the cache store will only be
         // done once we actually want to access data from this object
         return new Item($key, $this->repository);
@@ -97,7 +93,6 @@ class Pool implements CacheItemPoolInterface
 
             $items[$key] = $this->getItem($key);
         }
-
         return $items;
     }
 
@@ -107,9 +102,7 @@ class Pool implements CacheItemPoolInterface
     public function hasItem($key)
     {
         $this->assertValidKey($key);
-
         $item = $this->getItem($key);
-
         return $item->isHit();
     }
 
@@ -119,7 +112,6 @@ class Pool implements CacheItemPoolInterface
     public function clear()
     {
         $this->deferred = array();
-
         return $this->store->flush();
     }
 
@@ -129,10 +121,8 @@ class Pool implements CacheItemPoolInterface
     public function deleteItem($key)
     {
         $this->assertValidKey($key);
-
         $this->store->delete($key);
         unset($this->deferred[$key]);
-
         // as long as the item is gone from the cache (even if it never existed
         // and delete failed because of that), we should return `true`
         return true;
@@ -145,12 +135,9 @@ class Pool implements CacheItemPoolInterface
     {
         foreach ($keys as $key) {
             $this->assertValidKey($key);
-
             unset($this->deferred[$key]);
         }
-
         $this->store->deleteMulti($keys);
-
         // as long as the item is gone from the cache (even if it never existed
         // and delete failed because of that), we should return `true`
         return true;
@@ -163,24 +150,21 @@ class Pool implements CacheItemPoolInterface
     {
         if (!$item instanceof Item) {
             throw new InvalidArgumentException(
-                'MatthiasMullie\Scrapbook\Psr6\Pool can only save
-                MatthiasMullie\Scrapbook\Psr6\Item objects'
+                'bdk\SimpleCache\Psr6\Pool can only save bdk\SimpleCache\Psr6\Item objects'
             );
         }
 
         if (!$item->hasChanged()) {
             /*
-             * If the item didn't change, we don't have to re-save it. We do,
-             * however, need to check if the item actually holds a value: if it
-             * does, it should be considered "saved" (even though nothing has
-             * changed, the value for this key is in cache) and if it doesn't,
-             * well then nothing is in cache.
-             */
+                If the item didn't change, we don't have to re-save it. We do,
+                however, need to check if the item actually holds a value: if it
+                does, it should be considered "saved" (even though nothing has
+                changed, the value for this key is in cache) and if it doesn't,
+                well then nothing is in cache.
+            */
             return $item->get() !== null;
         }
-
         $expire = $item->getExpiration();
-
         return $this->store->set($item->getKey(), $item->get(), $expire);
     }
 
@@ -191,17 +175,14 @@ class Pool implements CacheItemPoolInterface
     {
         if (!$item instanceof Item) {
             throw new InvalidArgumentException(
-                'MatthiasMullie\Scrapbook\Psr6\Pool can only save
-                MatthiasMullie\Scrapbook\Psr6\Item objects'
+                'bdk\SimpleCache\Psr6\Pool can only save bdk\SimpleCache\Psr6\Item objects'
             );
         }
-
         $this->deferred[$item->getKey()] = $item;
         // let's pretend that this actually comes from cache (we'll store it
         // there soon), unless if it's already expired (in which case it will
         // never reach cache...)
         $item->overrideIsHit(!$item->isExpired());
-
         return true;
     }
 
@@ -211,34 +192,31 @@ class Pool implements CacheItemPoolInterface
     public function commit()
     {
         $deferred = array();
-        foreach ($this->deferred as $key => $item) {
+        foreach ($this->deferred as $item) {
             if ($item->isExpired()) {
                 // already expired: don't even save it
                 continue;
             }
-
-            // setMulti doesn't allow to set expiration times on a per-item basis,
+            // setMultiple doesn't allow to set expiration times on a per-item basis,
             // so we'll have to group our requests per expiration date
             $expire = $item->getExpiration();
             $deferred[$expire][$item->getKey()] = $item->get();
         }
-
-        // setMulti doesn't allow to set expiration times on a per-item basis,
+        // setMultiple doesn't allow to set expiration times on a per-item basis,
         // so we'll have to group our requests per expiration date
         $success = true;
         foreach ($deferred as $expire => $items) {
-            $status = $this->store->setMulti($items, $expire);
+            $status = $this->store->setMultiple($items, $expire);
             $success &= !in_array(false, $status);
             unset($deferred[$expire]);
         }
-
         return (bool) $success;
     }
 
     /**
      * Throws an exception if $key is invalid.
      *
-     * @param string $key
+     * @param string $key key to test
      *
      * @throws InvalidArgumentException
      */

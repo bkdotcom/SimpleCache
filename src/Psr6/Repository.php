@@ -1,8 +1,8 @@
 <?php
 
-namespace MatthiasMullie\Scrapbook\Psr6;
+namespace bdk\SimpleCache\Psr6;
 
-use MatthiasMullie\Scrapbook\KeyValueStore;
+use bdk\SimpleCache\KeyValueStoreInterface;
 
 /**
  * Helper object to serve as glue between pool & item.
@@ -14,10 +14,6 @@ use MatthiasMullie\Scrapbook\KeyValueStore;
  * Instead, every Item returned by get() will be a "placeholder", and once the
  * values are actually needed, this object will be called to go do that (along
  * with every other value that has not yet been resolved, while we're at it)
- *
- * @author Matthias Mullie <scrapbook@mullie.eu>
- * @copyright Copyright (c) 2014, Matthias Mullie. All rights reserved
- * @license LICENSE MIT
  */
 class Repository
 {
@@ -41,7 +37,7 @@ class Repository
     protected $unresolved = array();
 
     /**
-     * @param KeyValueStore $store
+     * @param KeyValueStoreInterface $store KeyValueStoreInterface instance
      */
     public function __construct(KeyValueStore $store)
     {
@@ -85,14 +81,13 @@ class Repository
     /**
      * @param string $unique
      *
-     * @return bool
+     * @return boolean
      */
     public function exists($unique)
     {
         if (array_key_exists($unique, $this->unresolved)) {
             $this->resolve();
         }
-
         return array_key_exists($unique, $this->resolved);
     }
 
@@ -109,20 +104,17 @@ class Repository
                 // key doesn't exist in cache
                 continue;
             }
-
             /*
-             * In theory, there could've been multiple unresolved requests for
-             * the same cache key. In the case of objects, we'll clone them
-             * to make sure that when the value for 1 item is manipulated, it
-             * doesn't affect the value of the other item (because those objects
-             * would be passed by-ref without the cloning)
-             */
+                In theory, there could've been multiple unresolved requests for
+                the same cache key. In the case of objects, we'll clone them
+                to make sure that when the value for 1 item is manipulated, it
+                doesn't affect the value of the other item (because those objects
+                would be passed by-ref without the cloning)
+            */
             $value = $values[$key];
             $value = is_object($value) ? clone $value : $value;
-
             $this->resolved[$unique] = $value;
         }
-
         $this->unresolved = array();
     }
 }

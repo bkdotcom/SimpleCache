@@ -1,14 +1,12 @@
 <?php
 
-namespace MatthiasMullie\Scrapbook\Tests\Psr16\Integration;
+namespace bdk\SimpleCache\Tests\Psr16\Integration;
 
 use Cache\IntegrationTests\SimpleCacheTest;
-use MatthiasMullie\Scrapbook\Adapters\Couchbase;
-use MatthiasMullie\Scrapbook\Adapters\Collections\Couchbase as CouchbaseCollection;
-use MatthiasMullie\Scrapbook\KeyValueStore;
-use MatthiasMullie\Scrapbook\Psr16\SimpleCache;
-use MatthiasMullie\Scrapbook\Tests\AdapterTestProvider;
-use MatthiasMullie\Scrapbook\Tests\AdapterProviderTestInterface;
+use bdk\SimpleCache\KeyValueStoreInterface;
+use bdk\SimpleCache\SimpleCache;
+use bdk\SimpleCache\Tests\AdapterTestProvider;
+use bdk\SimpleCache\Tests\AdapterProviderTestInterface;
 
 class IntegrationTest extends SimpleCacheTest implements AdapterProviderTestInterface
 {
@@ -37,30 +35,16 @@ class IntegrationTest extends SimpleCacheTest implements AdapterProviderTestInte
     /**
      * {@inheritdoc}
      */
-    protected function setUp()
-    {
-        parent::setUp();
-
-        if ($this->adapter instanceof Couchbase || $this->adapter instanceof CouchbaseCollection) {
-            $this->skippedTests['testSetTtl'] = "Couchbase TTL can't be relied on with 1 second precision";
-            $this->skippedTests['testSetMultipleTtl'] = "Couchbase TTL can't be relied on with 1 second precision";
-        }
-    }
-
-    /**
-     * {@inheritdoc}
-     */
     public static function suite()
     {
         $provider = new AdapterTestProvider(new static());
-
         return $provider->getSuite();
     }
 
     /**
      * {@inheritdoc}
      */
-    public function setAdapter(KeyValueStore $adapter)
+    public function setAdapter(KeyValueStoreInterface $adapter)
     {
         $this->adapter = $adapter;
     }

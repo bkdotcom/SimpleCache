@@ -1,21 +1,19 @@
 <?php
 
-namespace MatthiasMullie\Scrapbook\Adapters\Collections;
+namespace bdk\SimpleCache\Adapters\Collections;
 
-use MatthiasMullie\Scrapbook\Adapters\Redis as Adapter;
+use bdk\SimpleCache\Adapters\Redis as Adapter;
 
 /**
  * Redis adapter for a subset of data, in a different database.
- *
- * @author Matthias Mullie <scrapbook@mullie.eu>
- * @copyright Copyright (c) 2014, Matthias Mullie. All rights reserved
- * @license LICENSE MIT
  */
 class Redis extends Adapter
 {
     /**
-     * @param \Redis $client
-     * @param int    $database
+     * Constructor
+     *
+     * @param \Redis  $client   Redis client
+     * @param integer $database database name
      */
     public function __construct($client, $database)
     {
@@ -26,7 +24,7 @@ class Redis extends Adapter
     /**
      * {@inheritdoc}
      */
-    public function flush()
+    public function clear()
     {
         return $this->client->flushDB();
     }

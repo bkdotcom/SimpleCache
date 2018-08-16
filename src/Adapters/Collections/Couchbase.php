@@ -1,9 +1,9 @@
 <?php
 
-namespace MatthiasMullie\Scrapbook\Adapters\Collections;
+namespace bdk\SimpleCache\Adapters\Collections;
 
-use MatthiasMullie\Scrapbook\Adapters\Couchbase as Adapter;
-use MatthiasMullie\Scrapbook\Adapters\Collections\Utils\PrefixReset;
+use bdk\SimpleCache\Adapters\Couchbase as Adapter;
+use bdk\SimpleCache\Adapters\Collections\Utils\PrefixReset;
 
 /**
  * Couchbase adapter for a subset of data, accomplished by prefixing keys.
@@ -19,16 +19,14 @@ use MatthiasMullie\Scrapbook\Adapters\Collections\Utils\PrefixReset;
  * Memcached: prefix keys & a reference value that can be changed to "flush"
  * the cache. If people want multiple different buckets, they can easily create
  * multiple Couchbase adapter objects.
- *
- * @author Matthias Mullie <scrapbook@mullie.eu>
- * @copyright Copyright (c) 2014, Matthias Mullie. All rights reserved
- * @license LICENSE MIT
  */
 class Couchbase extends PrefixReset
 {
     /**
-     * @param Adapter $cache
-     * @param string  $name
+     * Constructor
+     *
+     * @param Adapter $cache Couchbase adapter
+     * @param string  $name  collection name
      */
     public function __construct(Adapter $cache, $name)
     {

@@ -1,17 +1,5 @@
-[![Scrapbook PHP cache](https://www.scrapbook.cash/public/logo_side.png)](https://www.scrapbook.cash)
-
-[![Build status](https://api.travis-ci.org/matthiasmullie/scrapbook.svg?branch=master)](https://travis-ci.org/matthiasmullie/scrapbook)
-[![Code coverage](https://img.shields.io/codecov/c/github/matthiasmullie/scrapbook.svg)](https://codecov.io/github/matthiasmullie/scrapbook)
-[![Code quality](https://img.shields.io/scrutinizer/g/matthiasmullie/scrapbook.svg)](https://scrutinizer-ci.com/g/matthiasmullie/scrapbook)
-[![Latest version](https://img.shields.io/packagist/v/matthiasmullie/scrapbook.svg)](https://packagist.org/packages/matthiasmullie/scrapbook)
-[![Downloads total](https://img.shields.io/packagist/dt/matthiasmullie/scrapbook.svg)](https://packagist.org/packages/matthiasmullie/scrapbook)
-[![License](https://img.shields.io/packagist/l/matthiasmullie/scrapbook.svg)](https://github.com/matthiasmullie/scrapbook/blob/master/LICENSE)
-
-**[Donate/Support: ![Support](https://www.mullie.eu/public/donate.png)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&amp;hosted_button_id=3U2JXHLRMCPKL)**
-
-Documentation: https://www.scrapbook.cash - API reference: https://docs.scrapbook.cash
-
-# Table of contents
+# SimpleCache
+## Fork of [matthiasmullie/scrapbook](https://github.com/matthiasmullie/scrapbook)
 
 * [Installation & usage](#installation--usage)
 * [Adapters](#adapters)
@@ -40,12 +28,12 @@ Documentation: https://www.scrapbook.cash - API reference: https://docs.scrapboo
 
 # Installation & usage
 
-Simply add a dependency on matthiasmullie/scrapbook to your composer.json file
+Simply add a dependency on bdk/simplecache to your composer.json file
 if you use [Composer](https://getcomposer.org/) to manage the dependencies of
 your project:
 
 ```sh
-composer require matthiasmullie/scrapbook
+composer require bdk/simplecache
 ```
 
 The exact bootstrapping will depend on which adapter, features and interface
@@ -62,14 +50,14 @@ Here's a simple example: a Memcached-backed psr/cache with stampede protection.
 // create \Memcached object pointing to your Memcached server
 $client = new \Memcached();
 $client->addServer('localhost', 11211);
-// create Scrapbook KeyValueStore object
-$cache = new \MatthiasMullie\Scrapbook\Adapters\Memcached($client);
+// create KeyValueStore object
+$cache = new \bdk\SimpleCache\Adapters\Memcached($client);
 
 // create stampede protector layer over our real cache
-$cache = new \MatthiasMullie\Scrapbook\Scale\StampedeProtector($cache);
+$cache = new \bdk\SimpleCache\Scale\StampedeProtector($cache);
 
 // create Pool (psr/cache) object from cache engine
-$pool = new \MatthiasMullie\Scrapbook\Psr6\Pool($cache);
+$pool = new \bdk\SimpleCache\Psr6\Pool($cache);
 
 // get item from Pool
 $item = $pool->getItem('key');
@@ -104,8 +92,8 @@ to the Memcached adapter:
 // create \Memcached object pointing to your Memcached server
 $client = new \Memcached();
 $client->addServer('localhost', 11211);
-// create Scrapbook KeyValueStore object
-$cache = new \MatthiasMullie\Scrapbook\Adapters\Memcached($client);
+// create KeyValueStore object
+$cache = new \bdk\SimpleCache\Adapters\Memcached($client);
 ```
 
 
@@ -122,8 +110,8 @@ to the Redis adapter:
 // create \Redis object pointing to your Redis server
 $client = new \Redis();
 $client->connect('127.0.0.1');
-// create Scrapbook KeyValueStore object
-$cache = new \MatthiasMullie\Scrapbook\Adapters\Redis($client);
+// create KeyValueStore object
+$cache = new \bdk\SimpleCache\Adapters\Redis($client);
 ```
 
 
@@ -142,8 +130,8 @@ object to the Couchbase adapter:
 // create \CouchbaseBucket object pointing to your Couchbase server
 $cluster = new \CouchbaseCluster('couchbase://localhost');
 $bucket = $cluster->openBucket('default');
-// create Scrapbook KeyValueStore object
-$cache = new \MatthiasMullie\Scrapbook\Adapters\Couchbase($bucket);
+// create KeyValueStore object
+$cache = new \bdk\SimpleCache\Adapters\Couchbase($bucket);
 ```
 
 
@@ -158,8 +146,8 @@ machine and available to all PHP processes on that machine. The PECL
 extensions can be used.
 
 ```php
-// create Scrapbook KeyValueStore object
-$cache = new \MatthiasMullie\Scrapbook\Adapters\Apc();
+// create KeyValueStore object
+$cache = new \bdk\SimpleCache\Adapters\Apc();
 ```
 
 
@@ -180,8 +168,8 @@ storage, replication.)
 ```php
 // create \PDO object pointing to your MySQL server
 $client = new PDO('mysql:dbname=cache;host=127.0.0.1', 'root', '');
-// create Scrapbook KeyValueStore object
-$cache = new \MatthiasMullie\Scrapbook\Adapters\MySQL($client);
+// create KeyValueStore object
+$cache = new \bdk\SimpleCache\Adapters\PdoMySQL($client);
 ```
 
 ## PostgreSQL
@@ -200,8 +188,8 @@ storage, replication.)
 ```php
 // create \PDO object pointing to your PostgreSQL server
 $client = new PDO('pgsql:user=postgres dbname=cache password=');
-// create Scrapbook KeyValueStore object
-$cache = new \MatthiasMullie\Scrapbook\Adapters\PostgreSQL($client);
+// create KeyValueStore object
+$cache = new \bdk\SimpleCache\Adapters\PdoPgSQL($client);
 ```
 
 
@@ -217,8 +205,8 @@ cache server.
 ```php
 // create \PDO object pointing to your SQLite server
 $client = new PDO('sqlite:cache.db');
-// create Scrapbook KeyValueStore object
-$cache = new \MatthiasMullie\Scrapbook\Adapters\SQLite($client);
+// create KeyValueStore object
+$cache = new \bdk\SimpleCache\Adapters\PdoSQLite($client);
 ```
 
 
@@ -235,8 +223,8 @@ provides.
 // create Flysystem object
 $adapter = new \League\Flysystem\Adapter\Local('/path/to/cache', LOCK_EX);
 $filesystem = new \League\Flysystem\Filesystem($adapter);
-// create Scrapbook KeyValueStore object
-$cache = new \MatthiasMullie\Scrapbook\Adapters\Flysystem($filesystem);
+// create KeyValueStore object
+$cache = new \bdk\SimpleCache\Adapters\Flysystem($filesystem);
 ```
 
 
@@ -254,8 +242,8 @@ suite on this memory-based store, instead of setting up cache services and
 making sure they're in a pristine state...
 
 ```php
-// create Scrapbook KeyValueStore object
-$cache = new \MatthiasMullie\Scrapbook\Adapters\MemoryStore();
+// create KeyValueStore object
+$cache = new \bdk\SimpleCache\Adapters\Memory();
 ```
 
 
@@ -283,7 +271,7 @@ Just wrap the BufferedStore layer around your adapter (or other features):
 
 ```php
 // create buffered cache layer over our real cache
-$cache = new \MatthiasMullie\Scrapbook\Buffered\BufferedStore($cache);
+$cache = new \bdk\SimpleCache\Buffered\BufferedStore($cache);
 ```
 
 
@@ -310,7 +298,7 @@ Just wrap the TransactionalStore layer around your adapter (or other features):
 
 ```php
 // create transactional cache layer over our real cache
-$cache = new \MatthiasMullie\Scrapbook\Buffered\TransactionalStore($cache);
+$cache = new \bdk\SimpleCache\Buffered\TransactionalStore($cache);
 ```
 
 And TA-DA, you can use transactions!
@@ -359,7 +347,7 @@ Just wrap the StampedeProtector layer around your adapter (or other features):
 
 ```php
 // create stampede protector layer over our real cache
-$cache = new \MatthiasMullie\Scrapbook\Scale\StampedeProtector($cache);
+$cache = new \bdk\SimpleCache\Scale\StampedeProtector($cache);
 ```
 
 
@@ -387,19 +375,19 @@ Just wrap the Shard layer around your adapter (or other features):
 
 ```php
 // boilerplate code example with Redis, but any
-// MatthiasMullie\Scrapbook\KeyValueStore adapter will work
+// bdk\SimpleCache\KeyValueStoreInterface implementation will work
 $client = new \Redis();
 $client->connect('192.168.1.100');
-$cache1 = new \MatthiasMullie\Scrapbook\Adapters\Redis($client);
+$cache1 = new \bdk\SimpleCache\Adapters\Redis($client);
 
 // a second Redis server...
 $client2 = new \Redis();
 $client2->connect('192.168.1.101');
-$cache2 = new \MatthiasMullie\Scrapbook\Adapters\Redis($client);
+$cache2 = new \bdk\SimpleCache\Adapters\Redis($client);
 
 // create shard layer over our real caches
 // now $cache will automatically distribute the data across both servers
-$cache = new \MatthiasMullie\Scrapbook\Scale\Shard($cache1, $cache2);
+$cache = new \bdk\SimpleCache\Scale\Shard($cache1, $cache2);
 ```
 
 
@@ -412,7 +400,7 @@ KeyValueStore, and then there are 2 PSR interfaces put forward by the PHP FIG.
 ## KeyValueStore
 
 KeyValueStore is the cornerstone of this project. It is the interface that
-provides the most cache operations: `get`, `getMulti`, `set`, `setMulti`,
+provides the most cache operations: `get`, `getMulti`, `set`, `setMultiple`,
 `delete`, `deleteMulti`, `add`, `replace`, `cas`, `increment`, `decrement`,
 `touch` & `flush`.
 
@@ -442,8 +430,8 @@ is also supported by other cache libraries.
 You can easily use psr/cache by wrapping it around any KeyValueStore object:
 
 ```php
-// create Pool object from Scrapbook KeyValueStore object
-$pool = new \MatthiasMullie\Scrapbook\Psr6\Pool($cache);
+// create Pool object from KeyValueStoreInterface object
+$pool = new \bdk\SimpleCache\Psr6\Pool($cache);
 
 // get item from Pool
 $item = $pool->getItem('key');
@@ -475,8 +463,8 @@ You can easily use psr/simple-cache by wrapping it around any KeyValueStore
 object:
 
 ```php
-// create Simplecache object from Scrapbook KeyValueStore object
-$simplecache = new \MatthiasMullie\Scrapbook\Psr16\SimpleCache($cache);
+// create Simplecache object from KeyValueStoreInterface object
+$simplecache = new \bdk\SimpleCache\Psr16\SimpleCache($cache);
 
 // get value from cache
 $value = $simplecache->get('key');
@@ -510,7 +498,7 @@ Here's a simple example:
 // let's create a Memcached cache object
 $client = new \Memcached();
 $client->addServer('localhost', 11211);
-$cache = new \MatthiasMullie\Scrapbook\Adapters\Memcached($client);
+$cache = new \bdk\SimpleCache\Adapters\Memcached($client);
 
 $articleCache = $cache->collection('articles');
 $sessionCache = $cache->collection('sessions');
@@ -540,8 +528,8 @@ $articleCache = $cache->collection('articles');
 $sessionCache = $cache->collection('sessions');
 
 // create Pool objects from both KeyValueStore collections
-$articlePool = new \MatthiasMullie\Scrapbook\Psr6\Pool($articleCache);
-$sessionPool = new \MatthiasMullie\Scrapbook\Psr6\Pool($sessionCache);
+$articlePool = new \bdk\SimpleCache\Psr6\Pool($articleCache);
+$sessionPool = new \bdk\SimpleCache\Psr6\Pool($sessionCache);
 ```
 
 

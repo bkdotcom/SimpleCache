@@ -1,8 +1,8 @@
 <?php
 
-namespace MatthiasMullie\Scrapbook\Tests\Collections;
+namespace bdk\SimpleCache\Tests\Collections;
 
-use MatthiasMullie\Scrapbook\Tests\AdapterTest;
+use bdk\SimpleCache\Tests\AdapterTest;
 
 class CollectionsAdapterTest extends AdapterTest
 {
@@ -10,8 +10,8 @@ class CollectionsAdapterTest extends AdapterTest
     {
         parent::setUp();
 
-        // I'll do this here instead of in setAdapter, because that runs before
-        // the test suite, but I want a new collection for every single test
+        // Do this here instead of in setAdapter, because that runs before
+        // the test suite, but we want a new collection for every single test
         $this->cache = $this->cache->getCollection($this->collectionName);
     }
 
@@ -39,7 +39,7 @@ class CollectionsAdapterTest extends AdapterTest
         );
     }
 
-    public function testCollectionFlushParent()
+    public function testCollectionClearParent()
     {
         $this->markTestSkipped(
             'This test is invalid for collections derived from collections. '.
@@ -47,7 +47,7 @@ class CollectionsAdapterTest extends AdapterTest
         );
     }
 
-    public function testCollectionFlushCollection()
+    public function testCollectionClearCollection()
     {
         $this->markTestSkipped(
             'This test is invalid for collections derived from collections. '.

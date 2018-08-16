@@ -1,9 +1,9 @@
 <?php
 
-namespace MatthiasMullie\Scrapbook\Tests\Providers;
+namespace bdk\SimpleCache\Tests\Providers;
 
-use MatthiasMullie\Scrapbook\Exception\Exception;
-use MatthiasMullie\Scrapbook\Tests\AdapterProvider;
+use bdk\SimpleCache\Exception\Exception;
+use bdk\SimpleCache\Tests\AdapterProvider;
 
 class ApcProvider extends AdapterProvider
 {
@@ -13,6 +13,6 @@ class ApcProvider extends AdapterProvider
             throw new Exception('ext-apc(u) is not installed.');
         }
 
-        parent::__construct(new \MatthiasMullie\Scrapbook\Adapters\Apc());
+        parent::__construct(new \bdk\SimpleCache\Adapters\Apc());
     }
 }

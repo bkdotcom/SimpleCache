@@ -1,9 +1,9 @@
 <?php
 
-namespace MatthiasMullie\Scrapbook\Buffered\Utils;
+namespace bdk\SimpleCache\Buffered\Utils;
 
-use MatthiasMullie\Scrapbook\KeyValueStore;
-use MatthiasMullie\Scrapbook\Adapters\Collections\MemoryStore as BufferCollection;
+use bdk\SimpleCache\KeyValueStoreInterface;
+use bdk\SimpleCache\Adapters\Collections\MemoryStore as BufferCollection;
 
 /**
  * This is a helper class for BufferedStore & TransactionalStore, which buffer
@@ -18,12 +18,8 @@ use MatthiasMullie\Scrapbook\Adapters\Collections\MemoryStore as BufferCollectio
  * real cache. All deferred writes that fail to apply will cause that cache key
  * to be deleted, to ensure cache consistency.
  * Until commit() is called, all data is read from the temporary Buffer instance.
- *
- * @author Matthias Mullie <scrapbook@mullie.eu>
- * @copyright Copyright (c) 2014, Matthias Mullie. All rights reserved
- * @license LICENSE MIT
  */
-class Transaction implements KeyValueStore
+class Transaction implements KeyValueStoreInterface
 {
     /**
      * @var KeyValueStore
@@ -40,9 +36,8 @@ class Transaction implements KeyValueStore
      * to the real cache. This will hold a map of stub token => value, used to
      * verify when we do the actual CAS.
      *
-     * @see cas()
-     *
      * @var mixed[]
+     * @see cas()
      */
     protected $tokens = array();
 
@@ -58,7 +53,7 @@ class Transaction implements KeyValueStore
      * has not yet been committed. In that case, we don't want to fall back to
      * real cache values, because they're about to be flushed.
      *
-     * @var bool
+     * @var boolean
      */
     protected $suspend = false;
 
@@ -107,12 +102,11 @@ class Transaction implements KeyValueStore
         if ($value === false) {
             if ($this->local->expired($key)) {
                 /*
-                 * Item used to exist in local cache, but is now expired. This
-                 * is used when values are to be deleted: we don't want to reach
-                 * out to real storage because that would respond with the not-
-                 * yet-deleted value.
-                 */
-
+                    Item used to exist in local cache, but is now expired. This
+                    is used when values are to be deleted: we don't want to reach
+                    out to real storage because that would respond with the not-
+                    yet-deleted value.
+                */
                 return false;
             }
 
@@ -126,16 +120,15 @@ class Transaction implements KeyValueStore
         }
 
         /*
-         * $token will be unreliable to the deferred updates so generate
-         * a custom one and keep the associated value around.
-         * Read more details in PHPDoc for function cas().
-         * uniqid is ok here. Doesn't really have to be unique across
-         * servers, just has to be unique every time it's called in this
-         * one particular request - which it is.
-         */
+            $token will be unreliable to the deferred updates so generate
+            a custom one and keep the associated value around.
+            Read more details in PHPDoc for function cas().
+            uniqid is ok here. Doesn't really have to be unique across
+            servers, just has to be unique every time it's called in this
+            one particular request - which it is.
+        */
         $token = uniqid();
         $this->tokens[$token] = serialize($value);
-
         return $value;
     }
 
@@ -225,23 +218,21 @@ class Transaction implements KeyValueStore
         }
 
         /*
-         * To make sure that subsequent get() calls for this key don't return
-         * a value (it's supposed to be deleted), we'll make it expired in our
-         * temporary bag (as opposed to deleting it from out bag, in which case
-         * we'd fall back to fetching it from real store, where the transaction
-         * might not yet be committed)
-         */
+            To make sure that subsequent get() calls for this key don't return
+            a value (it's supposed to be deleted), we'll make it expired in our
+            temporary bag (as opposed to deleting it from out bag, in which case
+            we'd fall back to fetching it from real store, where the transaction
+            might not yet be committed)
+        */
         $this->local->set($key, $value, -1);
-
         $this->defer->delete($key);
-
         return true;
     }
 
     /**
      * {@inheritdoc}
      */
-    public function deleteMulti(array $keys)
+    public function deleteMultiple(array $keys)
     {
         // check the current values to see if they currently exists, so we can
         // properly return true/false as would be expected from KeyValueStore
@@ -260,7 +251,7 @@ class Transaction implements KeyValueStore
         // mark all as expired in local cache (see comment in delete())
         $this->local->setMulti($values, -1);
 
-        $this->defer->deleteMulti(array_keys($values));
+        $this->defer->deleteMultiple(array_keys($values));
 
         return $success;
     }
@@ -491,7 +482,7 @@ class Transaction implements KeyValueStore
      * Commits all deferred updates to real cache.
      * that had already been written to will be deleted.
      *
-     * @return bool
+     * @return boolean
      */
     public function commit()
     {
@@ -503,7 +494,7 @@ class Transaction implements KeyValueStore
     /**
      * Roll back all scheduled changes.
      *
-     * @return bool
+     * @return boolean
      */
     public function rollback()
     {

@@ -1,8 +1,8 @@
 <?php
 
-namespace MatthiasMullie\Scrapbook\Buffered\Utils;
+namespace bdk\SimpleCache\Buffered\Utils;
 
-use MatthiasMullie\Scrapbook\Adapters\MemoryStore;
+use bdk\SimpleCache\Adapters\Memory;
 
 /**
  * This is a helper class for BufferedStore & TransactionalStore, which buffer
@@ -17,12 +17,8 @@ use MatthiasMullie\Scrapbook\Adapters\MemoryStore;
  * method, which allows BufferedStore to just expire the keys that are supposed
  * to be deleted (instead of deleting them) - then we can keep track of when
  * a key is just not known, or known-but-deleted (=expired)
- *
- * @author Matthias Mullie <scrapbook@mullie.eu>
- * @copyright Copyright (c) 2014, Matthias Mullie. All rights reserved
- * @license LICENSE MIT
  */
-class Buffer extends MemoryStore
+class Buffer extends Memory
 {
     /**
      * Make items publicly available - if we create a collection from this,
@@ -39,9 +35,9 @@ class Buffer extends MemoryStore
      * from memory: we need to remember that they were expired, so we don't
      * reach out to real cache (only to get nothing, since it's expired...).
      *
-     * @param string $key
+     * @param string $key key to check
      *
-     * @return bool
+     * @return boolean
      */
     protected function exists($key)
     {
@@ -71,9 +67,9 @@ class Buffer extends MemoryStore
      * uncommitted write)
      * So we'll want to know when a value is in local cache, but expired!
      *
-     * @param string $key
+     * @param string $key key to check
      *
-     * @return bool
+     * @return boolean
      */
     public function expired($key)
     {
@@ -81,7 +77,6 @@ class Buffer extends MemoryStore
             // returned a value, clearly not yet expired
             return false;
         }
-
         // a known item, not returned by get, is expired
         return array_key_exists($key, $this->items);
     }

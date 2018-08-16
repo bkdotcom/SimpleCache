@@ -1,6 +1,6 @@
 <?php
 
-namespace MatthiasMullie\Scrapbook\Exception;
+namespace bdk\SimpleCache\Exception;
 
 /**
  * @author Matthias Mullie <scrapbook@mullie.eu>

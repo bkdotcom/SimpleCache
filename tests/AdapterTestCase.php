@@ -1,8 +1,8 @@
 <?php
 
-namespace MatthiasMullie\Scrapbook\Tests;
+namespace bdk\SimpleCache\Tests;
 
-use MatthiasMullie\Scrapbook\KeyValueStore;
+use bdk\SimpleCache\KeyValueStoreInterface;
 use PHPUnit\Framework\TestCase;
 
 class AdapterTestCase extends TestCase implements AdapterProviderTestInterface
@@ -20,11 +20,10 @@ class AdapterTestCase extends TestCase implements AdapterProviderTestInterface
     public static function suite()
     {
         $provider = new AdapterTestProvider(new static());
-
         return $provider->getSuite();
     }
 
-    public function setAdapter(KeyValueStore $adapter)
+    public function setAdapter(KeyValueStoreInterface $adapter)
     {
         $this->cache = $adapter;
     }
@@ -36,6 +35,6 @@ class AdapterTestCase extends TestCase implements AdapterProviderTestInterface
 
     public function tearDown()
     {
-        $this->cache->flush();
+        $this->cache->clear();
     }
 }

@@ -1,9 +1,9 @@
 <?php
 
-namespace MatthiasMullie\Scrapbook\Tests\Providers;
+namespace bdk\SimpleCache\Tests\Providers;
 
-use MatthiasMullie\Scrapbook\Exception\Exception;
-use MatthiasMullie\Scrapbook\Tests\AdapterProvider;
+use bdk\SimpleCache\Exception\Exception;
+use bdk\SimpleCache\Tests\AdapterProvider;
 
 class CouchbaseProvider extends AdapterProvider
 {
@@ -22,7 +22,7 @@ class CouchbaseProvider extends AdapterProvider
 
         $healthy = $this->waitForHealthyServer($bucket);
 
-        parent::__construct(new \MatthiasMullie\Scrapbook\Adapters\Couchbase($bucket, !$healthy));
+        parent::__construct(new \bdk\SimpleCache\Adapters\Couchbase($bucket, !$healthy));
     }
 
     /**
