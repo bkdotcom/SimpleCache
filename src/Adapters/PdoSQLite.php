@@ -22,7 +22,7 @@ class PdoSQLite extends PdoMySQL
         $statement->execute(array(
             ':key' => $key,
             ':value' => $value,
-            ':token' => md5($value),
+            ':token' => \md5($value),
             ':expiry' => $this->expiry($expire),
         ));
         return $statement->rowCount() === 1;
@@ -57,7 +57,7 @@ class PdoSQLite extends PdoMySQL
             $statement->execute(array(
                 ':key' => $key,
                 ':value' => $value,
-                ':token' => md5($value),
+                ':token' => \md5($value),
                 ':expiry' => $expiry,
             ));
             $success[$key] = (bool) $statement->rowCount();

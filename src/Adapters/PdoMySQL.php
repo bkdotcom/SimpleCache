@@ -22,7 +22,7 @@ class PdoMySQL extends PdoBase
         $statement->execute(array(
             ':key' => $key,
             ':value' => $value,
-            ':token' => md5($value),
+            ':token' => \md5($value),
             ':expiry' => $this->expiry($expire),
         ));
         return $statement->rowCount() === 1;
@@ -49,10 +49,10 @@ class PdoMySQL extends PdoBase
         $statement->execute(array(
             ':key' => $key,
             ':value' => $value,
-            ':token' => md5($value),
+            ':token' => \md5($value),
             ':expire' => $this->expiry($expire),
             ':calcTime' => $this->lastGetInfo['key'] == $key
-                ? (microtime(true) - $this->lastGetInfo['microtime']) * 1000000
+                ? (\microtime(true) - $this->lastGetInfo['microtime']) * 1000000
                 : 0,
         ));
         // 1 = insert; 2 = update
@@ -78,14 +78,14 @@ class PdoMySQL extends PdoBase
             $params += array(
                 ":key$i" => $key,
                 ":value$i" => $value,
-                ":token$i" => md5($value),
+                ":token$i" => \md5($value),
                 ":expiry$i" => $expiry,
             );
             ++$i;
         }
         $statement = $this->client->prepare(
             'REPLACE INTO '.$this->table.' (k, v, t, e)
-            VALUES '.implode(', ', $query)
+            VALUES '.\implode(', ', $query)
         );
         $statement->execute($params);
         /*
@@ -93,7 +93,7 @@ class PdoMySQL extends PdoBase
             depending on if REPLACE was an INSERT or UPDATE.
         */
         $success = $statement->rowCount() > 0;
-        return array_fill_keys(array_keys($items), $success);
+        return \array_fill_keys(\array_keys($items), $success);
     }
 
     /**

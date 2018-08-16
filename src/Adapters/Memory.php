@@ -37,7 +37,7 @@ class Memory extends Base
     public function __construct($limit = null)
     {
         if ($limit === null) {
-            $phpLimit = ini_get('memory_limit');
+            $phpLimit = \ini_get('memory_limit');
             if ($phpLimit <= 0) {
                 $this->limit = PHP_INT_MAX;
             } else {
@@ -96,7 +96,7 @@ class Memory extends Base
     {
         $exists = $this->exists($key);
         if ($exists) {
-            $this->size -= strlen($this->items[$key]['v']);
+            $this->size -= \strlen($this->items[$key]['v']);
             unset($this->items[$key]);
         }
         return $exists;
@@ -128,7 +128,7 @@ class Memory extends Base
         $value = $this->items[$key][0];
         // use serialized version of stored value as CAS token
         $token = $value;
-        return unserialize($value);
+        return \unserialize($value);
         */
         $token = null;
         $this->resetLastGetInfo($key);
@@ -136,22 +136,22 @@ class Memory extends Base
             return false;
         }
         $data = $this->items[$key];
-        $rand = mt_rand() / mt_getrandmax();    // random float between 0 and 1 inclusive
-        $isExpired = $data['e'] && $data['e'] < microtime(true) - $data['ct']/1000000 * log($rand);
-        $this->lastGetInfo = array_merge($this->lastGetInfo, array(
+        $rand = \mt_rand() / \mt_getrandmax();    // random float between 0 and 1 inclusive
+        $isExpired = $data['e'] && $data['e'] < \microtime(true) - $data['ct']/1000000 * \log($rand);
+        $this->lastGetInfo = \array_merge($this->lastGetInfo, array(
             'calcTime' => $data['ct'],
             'code' => 'hit',
             'expiry' => $data['e'],
             // 'expiryOriginal' => $data['eo'],
-            'token' => md5($data['v']),
+            'token' => \md5($data['v']),
         ));
         if ($isExpired) {
             $this->lastGetInfo['code'] = 'expired';
-            $this->lastGetInfo['expiredValue'] = unserialize($data['v']);
+            $this->lastGetInfo['expiredValue'] = \unserialize($data['v']);
             return false;
         }
         $token = $this->lastGetInfo['token'];
-        return unserialize($data['v']);
+        return \unserialize($data['v']);
 
     }
 
@@ -200,22 +200,22 @@ class Memory extends Base
     public function set($key, $value, $expire = 0)
     {
         $expire = $this->expiry($expire);
-        if ($expire !== 0 && $expire < time()) {
+        if ($expire !== 0 && $expire < \time()) {
             // setting an expired value??
             // just delete it now and be done with it
             return !isset($this->items[$key]) || $this->delete($key);
         }
         $this->size -= isset($this->items[$key])
-            ? strlen($this->items[$key]['v'])
+            ? \strlen($this->items[$key]['v'])
             : 0;
         $this->items[$key] = array(
-            'v' => serialize($value),
+            'v' => \serialize($value),
             'e' => $expire,
             'ct' => $this->lastGetInfo['key'] == $key
-                ? (microtime(true) - $this->lastGetInfo['microtime']) * 1000000
+                ? (\microtime(true) - $this->lastGetInfo['microtime']) * 1000000
                 : null,
         );
-        $this->size += strlen($this->items[$key]['v']);
+        $this->size += \strlen($this->items[$key]['v']);
         $this->lru($key);
         $this->evict();
         return true;
@@ -258,14 +258,14 @@ class Memory extends Base
      */
     protected function exists($key)
     {
-        if (!array_key_exists($key, $this->items)) {
+        if (!\array_key_exists($key, $this->items)) {
             // key not in cache
             return false;
         }
         $expire = $this->items[$key]['e'];
-        if ($expire !== 0 && $expire < time()) {
+        if ($expire !== 0 && $expire < \time()) {
             // not permanent & expired
-            $this->size -= strlen($this->items[$key]['v']);
+            $this->size -= \strlen($this->items[$key]['v']);
             unset($this->items[$key]);
             return false;
         }
@@ -292,7 +292,7 @@ class Memory extends Base
             return $initial;
         }
         $value = $this->get($key);
-        if (!is_numeric($value)) {
+        if (!\is_numeric($value)) {
             return false;
         }
         $value += $offset;
@@ -308,8 +308,8 @@ class Memory extends Base
     protected function evict()
     {
         while ($this->size > $this->limit && !empty($this->items)) {
-            $item = array_shift($this->items);
-            $this->size -= strlen($item['v']);
+            $item = \array_shift($this->items);
+            $this->size -= \strlen($item['v']);
         }
     }
 
@@ -339,13 +339,13 @@ class Memory extends Base
      */
     protected function shorthandToBytes($shorthand)
     {
-        if (is_numeric($shorthand)) {
+        if (\is_numeric($shorthand)) {
             // make sure that when float(1.234E17) is passed in, it doesn't get
             // cast to string('1.234E17'), then to int(1)
             return $shorthand;
         }
-        $units = array('B' => 1024, 'M' => pow(1024, 2), 'G' => pow(1024, 3));
-        return (int) preg_replace_callback('/^([0-9]+)('.implode(array_keys($units), '|').')$/', function ($match) use ($units) {
+        $units = array('B' => 1024, 'M' => \pow(1024, 2), 'G' => \pow(1024, 3));
+        return (int) \preg_replace_callback('/^([0-9]+)('.\implode(\array_keys($units), '|').')$/', function ($match) use ($units) {
             return $match[1] * $units[$match[2]];
         }, $shorthand);
     }

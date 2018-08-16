@@ -71,7 +71,7 @@ class Item implements CacheItemInterface
          * up this value in the repository when it's no longer needed.
          */
         $this->repository = $repository;
-        $this->hash = spl_object_hash($this);
+        $this->hash = \spl_object_hash($this);
         $this->repository->add($this->hash, $this->key);
     }
 
@@ -147,15 +147,15 @@ class Item implements CacheItemInterface
             $this->expire = 0;
             $this->changed = true;
         } else {
-            $class = get_class($this);
-            $type = gettype($expiration);
+            $class = \get_class($this);
+            $type = \gettype($expiration);
             $error = "Argument 1 passed to $class::expiresAt()  must be an ".
                 "instance of DateTime or DateTimeImmutable, $type given";
 
-            if (class_exists('\TypeError')) {
+            if (\class_exists('\TypeError')) {
                 throw new \TypeError($error);
             }
-            trigger_error($error, E_USER_ERROR);
+            \trigger_error($error, E_USER_ERROR);
         }
 
         return $this;
@@ -171,14 +171,14 @@ class Item implements CacheItemInterface
             $expire->add($time);
             // convert datetime to unix timestamp
             $this->expire = (int) $expire->format('U');
-        } elseif (is_int($time)) {
-            $this->expire = time() + $time;
-        } elseif (is_null($time)) {
+        } elseif (\is_int($time)) {
+            $this->expire = \time() + $time;
+        } elseif (\is_null($time)) {
             // this is allowed, but just defaults to infinite
             $this->expire = 0;
         } else {
             throw new InvalidArgumentException(
-                'Invalid time: '.serialize($time).'. Must be integer or '.
+                'Invalid time: '.\serialize($time).'. Must be integer or '.
                 'instance of DateInterval.'
             );
         }
@@ -207,7 +207,7 @@ class Item implements CacheItemInterface
     {
         $expire = $this->getExpiration();
 
-        return $expire !== 0 && $expire < time();
+        return $expire !== 0 && $expire < \time();
     }
 
     /**

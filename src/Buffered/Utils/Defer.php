@@ -178,7 +178,7 @@ class Defer
          * applies on top op that change. We can just fold it in there & update
          * the value we set initially.
          */
-        if (isset($this->keys[$key]) && in_array($this->keys[$key][0], array('set', 'add', 'replace', 'cas'))) {
+        if (isset($this->keys[$key]) && \in_array($this->keys[$key][0], array('set', 'add', 'replace', 'cas'))) {
             $this->keys[$key][2]['value'] = $value;
             $this->keys[$key][2]['expire'] = $expire;
 
@@ -204,7 +204,7 @@ class Defer
 
             // check if the value we just read from real cache is still the same
             // as the one we saved when doing the original fetch
-            if (serialize($current) === $originalValue) {
+            if (\serialize($current) === $originalValue) {
                 // everything still checked out, CAS the value for real now
                 return $cache->cas($token, $key, $value, $expire);
             }
@@ -253,13 +253,13 @@ class Defer
     protected function doIncrement($operation, $key, $offset, $initial, $expire)
     {
         if (isset($this->keys[$key])) {
-            if (in_array($this->keys[$key][0], array('set', 'add', 'replace', 'cas'))) {
+            if (\in_array($this->keys[$key][0], array('set', 'add', 'replace', 'cas'))) {
                 // we're trying to increment a key that's only just being stored
                 // in this transaction - might as well combine those
                 $symbol = $this->keys[$key][1] === 'increment' ? 1 : -1;
                 $this->keys[$key][2]['value'] += $symbol * $offset;
                 $this->keys[$key][2]['expire'] = $expire;
-            } elseif (in_array($this->keys[$key][0], array('increment', 'decrement'))) {
+            } elseif (\in_array($this->keys[$key][0], array('increment', 'decrement'))) {
                 // we're trying to increment a key that's already being incremented
                 // or decremented in this transaction - might as well combine those
 
@@ -273,7 +273,7 @@ class Defer
 
                 $offset = $previous + $current;
 
-                $this->keys[$key][2]['offset'] = abs($offset);
+                $this->keys[$key][2]['offset'] = \abs($offset);
                 // initial value must also be adjusted to include the new offset
                 $this->keys[$key][2]['initial'] += $current;
                 $this->keys[$key][2]['expire'] = $expire;
@@ -350,12 +350,12 @@ class Defer
         list($old, $new) = $this->generateRollback();
         $updates = $this->generateUpdates();
         $updates = $this->combineUpdates($updates);
-        usort($updates, array($this, 'sortUpdates'));
+        \usort($updates, array($this, 'sortUpdates'));
 
         foreach ($updates as $update) {
             // apply update to cache & receive a simple bool to indicate
             // success (true) or failure (false)
-            $success = call_user_func_array($update[1], $update[2]);
+            $success = \call_user_func_array($update[1], $update[2]);
             if ($success === false) {
                 $this->rollback($old, $new);
 
@@ -420,7 +420,7 @@ class Defer
 
             // we only need values for cas & replace - recovering from an 'add'
             // is just deleting the value...
-            if (in_array($operation, array('cas', 'replace'))) {
+            if (\in_array($operation, array('cas', 'replace'))) {
                 $keys[] = $key;
                 $new[$key] = $data[2]['value'];
             }
@@ -508,7 +508,7 @@ class Defer
             $callback = function ($items, $expire) use ($cache) {
                 $success = $cache->setMulti($items, $expire);
 
-                return !in_array(false, $success);
+                return !\in_array(false, $success);
             };
 
             foreach ($setMulti as $expire => $items) {
@@ -568,14 +568,14 @@ class Defer
             'touch',
             'increment',
             'decrement',
-            'set', 'setMulti',
-            'delete', 'deleteMulti',
+            'set', 'setMultiple',
+            'delete', 'deleteMultiple',
         );
 
         if ($a[0] === $b[0]) {
             return 0;
         }
 
-        return array_search($a[0], $updateOrder) < array_search($b[0], $updateOrder) ? -1 : 1;
+        return \array_search($a[0], $updateOrder) < \array_search($b[0], $updateOrder) ? -1 : 1;
     }
 }

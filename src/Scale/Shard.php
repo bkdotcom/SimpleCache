@@ -41,8 +41,8 @@ class Shard implements KeyValueStore
      */
     public function __construct(KeyValueStore $cache1, KeyValueStore $cache2 = null /* , [KeyValueStore $cache3, [...]] */)
     {
-        $caches = func_get_args();
-        $caches = array_filter($caches);
+        $caches = \func_get_args();
+        $caches = \array_filter($caches);
         $this->caches = $caches;
     }
 
@@ -94,13 +94,13 @@ class Shard implements KeyValueStore
      */
     public function setMulti(array $items, $expire = 0)
     {
-        $shards = $this->getShards(array_keys($items));
+        $shards = $this->getShards(\array_keys($items));
         $results = array();
 
         /** @var KeyValueStore $shard */
         foreach ($shards as $shard) {
             $keysOnShard = $shards[$shard];
-            $itemsOnShard = array_intersect_key($items, array_flip($keysOnShard));
+            $itemsOnShard = \array_intersect_key($items, \array_flip($keysOnShard));
             $results += $shard->setMulti($itemsOnShard, $expire);
         }
 
@@ -201,7 +201,7 @@ class Shard implements KeyValueStore
     {
         $shard = new static($this->caches[0]->getCollection($name));
 
-        $count = count($this->caches);
+        $count = \count($this->caches);
         for ($i = 1; $i < $count; ++$i) {
             $shard->addCache($this->caches[$i]->getCollection($name));
         }
@@ -229,12 +229,12 @@ class Shard implements KeyValueStore
          * Since we don't use the hash for encryption, the fastest algorithm
          * will do just fine here.
          */
-        $hash = crc32($key);
+        $hash = \crc32($key);
 
         // crc32 on 32-bit machines can produce a negative int
-        $hash = abs($hash);
+        $hash = \abs($hash);
 
-        $index = $hash % count($this->caches);
+        $index = $hash % \count($this->caches);
 
         return $this->caches[$index];
     }
@@ -257,7 +257,7 @@ class Shard implements KeyValueStore
                 $shards[$shard] = array();
             }
 
-            $shards[$shard] = array_merge($shards[$shard], array($key));
+            $shards[$shard] = \array_merge($shards[$shard], array($key));
         }
 
         return $shards;

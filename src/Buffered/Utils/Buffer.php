@@ -41,13 +41,13 @@ class Buffer extends Memory
      */
     protected function exists($key)
     {
-        if (!array_key_exists($key, $this->items)) {
+        if (!\array_key_exists($key, $this->items)) {
             // key not in cache
             return false;
         }
 
         $expire = $this->items[$key][1];
-        if ($expire !== 0 && $expire < time()) {
+        if ($expire !== 0 && $expire < \time()) {
             // not permanent & already expired
             return false;
         }
@@ -78,7 +78,7 @@ class Buffer extends Memory
             return false;
         }
         // a known item, not returned by get, is expired
-        return array_key_exists($key, $this->items);
+        return \array_key_exists($key, $this->items);
     }
 
     /**

@@ -58,7 +58,7 @@ class Pool implements CacheItemPoolInterface
     public function getItem($key)
     {
         $this->assertValidKey($key);
-        if (array_key_exists($key, $this->deferred)) {
+        if (\array_key_exists($key, $this->deferred)) {
             /*
                 In theory, we could request & change a deferred value. In the
                 case of objects, we'll clone them to make sure that when the
@@ -67,7 +67,7 @@ class Pool implements CacheItemPoolInterface
                 be passed by-ref without the cloning)
             */
             $value = $this->deferred[$key];
-            $item = is_object($value) ? clone $value : $value;
+            $item = \is_object($value) ? clone $value : $value;
             /*
                 Deferred items should identify as being hit, unless if expired:
                 @see https://groups.google.com/forum/?fromgroups#!topic/php-fig/pxy_VYgm2sU
@@ -207,7 +207,7 @@ class Pool implements CacheItemPoolInterface
         $success = true;
         foreach ($deferred as $expire => $items) {
             $status = $this->store->setMultiple($items, $expire);
-            $success &= !in_array(false, $status);
+            $success &= !\in_array(false, $status);
             unset($deferred[$expire]);
         }
         return (bool) $success;
@@ -222,15 +222,15 @@ class Pool implements CacheItemPoolInterface
      */
     protected function assertValidKey($key)
     {
-        if (!is_string($key)) {
+        if (!\is_string($key)) {
             throw new InvalidArgumentException(
-                'Invalid key: '.var_export($key, true).'. Key should be a string.'
+                'Invalid key: '.\var_export($key, true).'. Key should be a string.'
             );
         }
 
         // valid key according to PSR-6 rules
-        $invalid = preg_quote(static::KEY_INVALID_CHARACTERS, '/');
-        if (preg_match('/['.$invalid.']/', $key)) {
+        $invalid = \preg_quote(static::KEY_INVALID_CHARACTERS, '/');
+        if (\preg_match('/['.$invalid.']/', $key)) {
             throw new InvalidArgumentException(
                 'Invalid key: '.$key.'. Contains (a) character(s) reserved '.
                 'for future extension: '.static::KEY_INVALID_CHARACTERS

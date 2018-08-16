@@ -74,8 +74,8 @@ class PdoPgSQL extends PdoBase
     {
         // BYTEA data return streams. Even though it's not how init() will
         // configure the DB by default, it could be used instead!
-        if (is_resource($value)) {
-            $value = stream_get_contents($value);
+        if (\is_resource($value)) {
+            $value = \stream_get_contents($value);
         }
         return parent::unserialize($value);
     }

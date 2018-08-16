@@ -45,6 +45,6 @@ class BufferCollection extends MemoryCollection
         }
 
         // a known item, not returned by get, is expired
-        return array_key_exists($key, $this->cache->items);
+        return \array_key_exists($key, $this->cache->items);
     }
 }

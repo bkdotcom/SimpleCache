@@ -46,7 +46,7 @@ class Memcached extends Base
      */
     public function cas($token, $key, $value, $expire = 0)
     {
-        if (!is_float($token) && !is_int($token)) {
+        if (!\is_float($token) && !\is_int($token)) {
             return $this->add($key, $value, $expire);
         }
         $expire = $this->expiry($expire);
@@ -57,7 +57,7 @@ class Memcached extends Base
                 // ? $this->lastGetInfo['expiryOriginal']
                 // : $expire,
             'ct' => $this->lastGetInfo['key'] == $key
-                ? (microtime(true) - $this->lastGetInfo['microtime']) * 1000000
+                ? (\microtime(true) - $this->lastGetInfo['microtime']) * 1000000
                 : null
         ), $this->expireExtend($this->expiry($expire)));
         if (!$success && $this->client->getResultCode() === \Memcached::RES_NOTFOUND) {
@@ -91,7 +91,7 @@ class Memcached extends Base
         if (empty($keys)) {
             return array();
         }
-        if (!method_exists($this->client, 'deleteMulti')) {
+        if (!\method_exists($this->client, 'deleteMulti')) {
             /*
                 HHVM didn't always support deleteMulti, so we'll hack around it by
                 setting all items expired.
@@ -101,19 +101,19 @@ class Memcached extends Base
                 @see http://docs.hhvm.com/manual/en/memcached.deletemulti.php
             */
             $values = $this->getMultiple($keys);
-            $keys = array_map(array($this, 'encodeKey'), array_keys($values));
-            $this->client->setMulti(array_fill_keys($keys, ''), time() - 1);
+            $keys = \array_map(array($this, 'encodeKey'), \array_keys($values));
+            $this->client->setMulti(\array_fill_keys($keys, ''), \time() - 1);
             $return = array();
             foreach ($keys as $key) {
                 $key = $this->decodeKey($key);
-                $return[$key] = array_key_exists($key, $values);
+                $return[$key] = \array_key_exists($key, $values);
             }
             return $return;
         }
-        $keys = array_map(array($this, 'encodeKey'), $keys);
+        $keys = \array_map(array($this, 'encodeKey'), $keys);
         $result = (array) $this->client->deleteMulti($keys);
-        $keys = array_map(array($this, 'decodeKey'), array_keys($result));
-        $result = array_combine($keys, $result);
+        $keys = \array_map(array($this, 'decodeKey'), \array_keys($result));
+        $result = \array_combine($keys, $result);
         /*
             Contrary to docs (http://php.net/manual/en/memcached.deletemulti.php)
             deleteMulti returns an array of [key => true] (for successfully
@@ -160,22 +160,22 @@ class Memcached extends Base
         if (empty($keys)) {
             return array();
         }
-        $populateLastGetInfo = count($keys) == 1;
+        $populateLastGetInfo = \count($keys) == 1;
         if ($populateLastGetInfo) {
             $this->resetLastGetInfo($keys[0]);
         }
-        $keys = array_map(array($this, 'encodeKey'), $keys);
+        $keys = \array_map(array($this, 'encodeKey'), $keys);
         $return = $this->client->getMulti($keys, $tokens);
         $return = $return ?: array();
         $tokens = $tokens ?: array();
-        $keys = array_map(array($this, 'decodeKey'), array_keys($return));
-        $return = array_combine($keys, $return);
-        $tokens = array_combine($keys, $tokens);
+        $keys = \array_map(array($this, 'decodeKey'), \array_keys($return));
+        $return = \array_combine($keys, $return);
+        $tokens = \array_combine($keys, $tokens);
         foreach ($return as $key => $data) {
-            $rand = mt_rand() / mt_getrandmax();    // random float between 0 and 1 inclusive
-            $isExpired = $data['e'] && $data['e'] < microtime(true) - $data['ct']/1000000 * log($rand);
+            $rand = \mt_rand() / \mt_getrandmax();    // random float between 0 and 1 inclusive
+            $isExpired = $data['e'] && $data['e'] < \microtime(true) - $data['ct']/1000000 * \log($rand);
             if ($populateLastGetInfo) {
-                $this->lastGetInfo = array_merge($this->lastGetInfo, array(
+                $this->lastGetInfo = \array_merge($this->lastGetInfo, array(
                     'calcTime' => $data['ct'],
                     'code' => 'hit',
                     'expiry' => $data['e'],
@@ -219,7 +219,7 @@ class Memcached extends Base
         // Memcached seems to not timely purge items the way it should when
         // storing it with an expired timestamp
         $expire = $this->expiry($expire);
-        if ($expire !== 0 && $expire < time()) {
+        if ($expire !== 0 && $expire < \time()) {
             $this->delete($key);
             return true;
         }
@@ -231,7 +231,7 @@ class Memcached extends Base
                 // ? $this->lastGetInfo['expiryOriginal']
                 // : null,
             'ct' => $this->lastGetInfo['key'] == $key
-                ? (microtime(true) - $this->lastGetInfo['microtime']) * 1000000
+                ? (\microtime(true) - $this->lastGetInfo['microtime']) * 1000000
                 : null,
         );
         return $this->client->set($key, $value, $this->expireExtend($expire));
@@ -246,19 +246,19 @@ class Memcached extends Base
             return array();
         }
         $expire = $this->expiry($expire);
-        if ($expire !== 0 && $expire < time()) {
+        if ($expire !== 0 && $expire < \time()) {
             // setting expired?
             // delete instead
-            $keys = array_keys($items);
+            $keys = \array_keys($items);
             $this->deleteMultiple($keys);
-            return array_fill_keys($keys, true);
+            return \array_fill_keys($keys, true);
         }
         /*
             Numerical strings turn into integers when used as array keys, and
             HHVM (used to) reject(s) such cache keys.
             @see https://github.com/facebook/hhvm/pull/7654
         */
-        $items = array_map(function ($val) use ($expire) {
+        $items = \array_map(function ($val) use ($expire) {
             return array(
                 'v' => $val,
                 'e' => $expire,
@@ -267,26 +267,26 @@ class Memcached extends Base
             );
         }, $items);
         $expire = $this->expireExtend($expire);
-        if (defined('HHVM_VERSION')) {
-            $nums = array_filter(array_keys($items), 'is_numeric');
+        if (\defined('HHVM_VERSION')) {
+            $nums = \array_filter(\array_keys($items), 'is_numeric');
             if ($nums) {
                 $success = array();
-                $nums = array_intersect_key($items, array_fill_keys($nums, null));
+                $nums = \array_intersect_key($items, \array_fill_keys($nums, null));
                 foreach ($nums as $k => $v) {
                     $success[$k] = $this->set((string) $k, $v, $expire);
                 }
-                $remaining = array_diff_key($items, $nums);
+                $remaining = \array_diff_key($items, $nums);
                 if ($remaining) {
                     $success += $this->setMultiple($remaining, $expire);
                 }
                 return $success;
             }
         }
-        $keys = array_map(array($this, 'encodeKey'), array_keys($items));
-        $items = array_combine($keys, $items);
+        $keys = \array_map(array($this, 'encodeKey'), \array_keys($items));
+        $items = \array_combine($keys, $items);
         $success = $this->client->setMulti($items, $expire);
-        $keys = array_map(array($this, 'decodeKey'), array_keys($items));
-        return array_fill_keys($keys, $success);
+        $keys = \array_map(array($this, 'decodeKey'), \array_keys($items));
+        return \array_fill_keys($keys, $success);
     }
 
     /**
@@ -302,7 +302,7 @@ class Memcached extends Base
     /*
     public function touch($key, $expire)
     {
-        if ($expire !== 0 && $expire < time()) {
+        if ($expire !== 0 && $expire < \time()) {
             return $this->delete($key);
         }
         $value = $this->get($key, $token);
@@ -330,7 +330,7 @@ class Memcached extends Base
             $success = $this->add($key, $initial, $expire);
             return $success ? $initial : false;
         }
-        if (!is_numeric($value)) {
+        if (!\is_numeric($value)) {
             return false;
         }
         $value += $offset;
@@ -356,10 +356,10 @@ class Memcached extends Base
     protected function encodeKey($key)
     {
         $regex = '/[^\x21\x22\x24\x26-\x39\x3b-\x7e]+/';
-        $key = preg_replace_callback($regex, function ($match) {
-            return rawurlencode($match[0]);
+        $key = \preg_replace_callback($regex, function ($match) {
+            return \rawurlencode($match[0]);
         }, $key);
-        if (strlen($key) > 255) {
+        if (\strlen($key) > 255) {
             throw new InvalidKey(
                 "Invalid key: $key. Encoded Memcached keys can not exceed 255 chars."
             );
@@ -379,8 +379,8 @@ class Memcached extends Base
         // matches %20, %7F, ... but not %21, %22, ...
         // (=the encoded versions for those encoded in encode)
         $regex = '/%(?!2[1246789]|3[0-9]|3[B-F]|[4-6][0-9A-F]|5[0-9A-E])[0-9A-Z]{2}/i';
-        return preg_replace_callback($regex, function ($match) {
-            return rawurldecode($match[0]);
+        return \preg_replace_callback($regex, function ($match) {
+            return \rawurldecode($match[0]);
         }, $key);
     }
 
@@ -396,10 +396,10 @@ class Memcached extends Base
      */
     protected function expireExtend($expire)
     {
-        $tsNow = time();
+        $tsNow = \time();
         if ($expire > $tsNow) {
             $tsDiff = $expire - $tsNow;
-            $expire = $expire + min(60*60, max(60, $tsDiff * 0.25));
+            $expire = $expire + \min(60*60, \max(60, $tsDiff * 0.25));
         }
         return $expire;
     }

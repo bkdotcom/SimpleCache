@@ -70,11 +70,11 @@ class Transaction implements KeyValueStoreInterface
     {
         // can't do double typehint, so let's manually check the type
         if (!$local instanceof Buffer && !$local instanceof BufferCollection) {
-            $error = 'Invalid class for $local: '.get_class($local);
-            if (class_exists('\TypeError')) {
+            $error = 'Invalid class for $local: '.\get_class($local);
+            if (\class_exists('\TypeError')) {
                 throw new \TypeError($error);
             }
-            trigger_error($error, E_USER_ERROR);
+            \trigger_error($error, E_USER_ERROR);
         }
 
         $this->cache = $cache;
@@ -127,8 +127,8 @@ class Transaction implements KeyValueStoreInterface
             servers, just has to be unique every time it's called in this
             one particular request - which it is.
         */
-        $token = uniqid();
-        $this->tokens[$token] = serialize($value);
+        $token = \uniqid();
+        $this->tokens[$token] = \serialize($value);
         return $value;
     }
 
@@ -144,7 +144,7 @@ class Transaction implements KeyValueStoreInterface
         // short-circuit reading from real cache if we have an uncommitted flush
         if (!$this->suspend) {
             // figure out which missing key we need to get from real cache
-            $keys = array_diff($keys, array_keys($values));
+            $keys = \array_diff($keys, \array_keys($values));
             foreach ($keys as $i => $key) {
                 // don't reach out to real cache for keys that are about to be gone
                 if ($this->local->expired($key)) {
@@ -162,9 +162,9 @@ class Transaction implements KeyValueStoreInterface
         // any tokens we get will be unreliable, so generate some replacements
         // (more elaborate explanation in get())
         foreach ($values as $key => $value) {
-            $token = uniqid();
+            $token = \uniqid();
             $tokens[$key] = $token;
-            $this->tokens[$token] = serialize($value);
+            $this->tokens[$token] = \serialize($value);
         }
 
         return $values;
@@ -197,7 +197,7 @@ class Transaction implements KeyValueStoreInterface
         $success = $this->local->setMulti($items, $expire);
 
         // only attempt to store those that we've set successfully to local
-        $successful = array_intersect_key($items, $success);
+        $successful = \array_intersect_key($items, $success);
         if (!empty($successful)) {
             $this->defer->setMulti($successful, $expire);
         }
@@ -239,11 +239,11 @@ class Transaction implements KeyValueStoreInterface
         $items = $this->getMulti($keys);
         $success = array();
         foreach ($keys as $key) {
-            $success[$key] = array_key_exists($key, $items);
+            $success[$key] = \array_key_exists($key, $items);
         }
 
         // only attempt to store those that we've deleted successfully to local
-        $values = array_intersect_key($success, array_flip($keys));
+        $values = \array_intersect_key($success, \array_flip($keys));
         if (empty($values)) {
             return array();
         }
@@ -251,7 +251,7 @@ class Transaction implements KeyValueStoreInterface
         // mark all as expired in local cache (see comment in delete())
         $this->local->setMulti($values, -1);
 
-        $this->defer->deleteMultiple(array_keys($values));
+        $this->defer->deleteMultiple(\array_keys($values));
 
         return $success;
     }
@@ -331,7 +331,7 @@ class Transaction implements KeyValueStoreInterface
         $originalValue = isset($this->tokens[$token]) ? $this->tokens[$token] : null;
 
         // value is no longer the same as what we used for token
-        if (serialize($this->get($key)) !== $originalValue) {
+        if (\serialize($this->get($key)) !== $originalValue) {
             return false;
         }
 
@@ -365,13 +365,13 @@ class Transaction implements KeyValueStoreInterface
             $value = $initial - $offset;
         }
 
-        if (!is_numeric($value) || !is_numeric($offset)) {
+        if (!\is_numeric($value) || !\is_numeric($offset)) {
             return false;
         }
 
         // store the value in memory, so that when we ask for it again later
         // in this same request, we get the value we just set
-        $value = max(0, $value + $offset);
+        $value = \max(0, $value + $offset);
         $success = $this->local->set($key, $value, $expire);
         if ($success === false) {
             return false;
@@ -399,13 +399,13 @@ class Transaction implements KeyValueStoreInterface
             $value = $initial + $offset;
         }
 
-        if (!is_numeric($value) || !is_numeric($offset)) {
+        if (!\is_numeric($value) || !\is_numeric($offset)) {
             return false;
         }
 
         // store the value in memory, so that when we ask for it again later
         // in this same request, we get the value we just set
-        $value = max(0, $value - $offset);
+        $value = \max(0, $value - $offset);
         $success = $this->local->set($key, $value, $expire);
         if ($success === false) {
             return false;

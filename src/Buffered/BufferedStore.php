@@ -77,12 +77,12 @@ class BufferedStore implements KeyValueStoreInterface
      *
      * {@inheritdoc}
      */
-    public function getMulti(array $keys, array &$tokens = null)
+    public function getMultiple(array $keys, array &$tokens = null)
     {
-        $values = $this->transaction->getMulti($keys, $tokens);
-        $missing = array_diff_key($values, $this->local->getMulti($keys));
+        $values = $this->transaction->getMultiple($keys, $tokens);
+        $missing = \array_diff_key($values, $this->local->getMultiple($keys));
         if (!empty($missing)) {
-            $this->local->setMulti($missing);
+            $this->local->setMultiple($missing);
         }
         return $values;
     }
@@ -100,9 +100,9 @@ class BufferedStore implements KeyValueStoreInterface
     /**
      * {@inheritdoc}
      */
-    public function setMulti(array $items, $expire = 0)
+    public function setMultiple(array $items, $expire = 0)
     {
-        $result = $this->transaction->setMulti($items, $expire);
+        $result = $this->transaction->setMultiple($items, $expire);
         $this->transaction->commit();
         return $result;
     }

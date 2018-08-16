@@ -45,9 +45,9 @@ class TransactionalStore implements KeyValueStoreInterface
      */
     public function __destruct()
     {
-        while (count($this->transactions) > 1) {
+        while (\count($this->transactions) > 1) {
             /** @var Transaction $transaction */
-            $transaction = array_pop($this->transactions);
+            $transaction = \array_pop($this->transactions);
             $transaction->rollback();
         }
     }
@@ -60,12 +60,12 @@ class TransactionalStore implements KeyValueStoreInterface
     {
         // we'll rely on buffer to respond data that has not yet committed, so
         // it must never evict from cache - I'd even rather see the app crash
-        $buffer = new Buffer(ini_get('memory_limit'));
+        $buffer = new Buffer(\ini_get('memory_limit'));
 
         // transactions can be nested: the previous transaction will serve as
         // cache backend for the new cache (so when committing a nested
         // transaction, it will commit to the parent transaction)
-        $cache = end($this->transactions);
+        $cache = \end($this->transactions);
         $this->transactions[] = new Transaction($buffer, $cache);
     }
 
@@ -80,11 +80,11 @@ class TransactionalStore implements KeyValueStoreInterface
      */
     public function commit()
     {
-        if (count($this->transactions) <= 1) {
+        if (\count($this->transactions) <= 1) {
             throw new UnbegunTransaction('Attempted to commit without having begun a transaction.');
         }
         /** @var Transaction $transaction */
-        $transaction = array_pop($this->transactions);
+        $transaction = \array_pop($this->transactions);
         return $transaction->commit();
     }
 
@@ -97,11 +97,11 @@ class TransactionalStore implements KeyValueStoreInterface
      */
     public function rollback()
     {
-        if (count($this->transactions) <= 1) {
+        if (\count($this->transactions) <= 1) {
             throw new UnbegunTransaction('Attempted to rollback without having begun a transaction.');
         }
         /** @var Transaction $transaction */
-        $transaction = array_pop($this->transactions);
+        $transaction = \array_pop($this->transactions);
         return $transaction->rollback();
     }
 
@@ -110,7 +110,7 @@ class TransactionalStore implements KeyValueStoreInterface
      */
     public function get($key, &$token = null)
     {
-        $cache = end($this->transactions);
+        $cache = \end($this->transactions);
         return $cache->get($key, $token);
     }
 
@@ -119,7 +119,7 @@ class TransactionalStore implements KeyValueStoreInterface
      */
     public function getMultiple(array $keys, array &$tokens = null)
     {
-        $cache = end($this->transactions);
+        $cache = \end($this->transactions);
         return $cache->getMultiple($keys, $tokens);
     }
 
@@ -128,7 +128,7 @@ class TransactionalStore implements KeyValueStoreInterface
      */
     public function set($key, $value, $expire = 0)
     {
-        $cache = end($this->transactions);
+        $cache = \end($this->transactions);
         return $cache->set($key, $value, $expire);
     }
 
@@ -137,7 +137,7 @@ class TransactionalStore implements KeyValueStoreInterface
      */
     public function setMultiple(array $items, $expire = 0)
     {
-        $cache = end($this->transactions);
+        $cache = \end($this->transactions);
         return $cache->setMultiple($items, $expire);
     }
 
@@ -146,7 +146,7 @@ class TransactionalStore implements KeyValueStoreInterface
      */
     public function delete($key)
     {
-        $cache = end($this->transactions);
+        $cache = \end($this->transactions);
         return $cache->delete($key);
     }
 
@@ -155,7 +155,7 @@ class TransactionalStore implements KeyValueStoreInterface
      */
     public function deleteMultiple(array $keys)
     {
-        $cache = end($this->transactions);
+        $cache = \end($this->transactions);
         return $cache->deleteMultiple($keys);
     }
 
@@ -164,7 +164,7 @@ class TransactionalStore implements KeyValueStoreInterface
      */
     public function add($key, $value, $expire = 0)
     {
-        $cache = end($this->transactions);
+        $cache = \end($this->transactions);
         return $cache->add($key, $value, $expire);
     }
 
@@ -173,7 +173,7 @@ class TransactionalStore implements KeyValueStoreInterface
      */
     public function replace($key, $value, $expire = 0)
     {
-        $cache = end($this->transactions);
+        $cache = \end($this->transactions);
         return $cache->replace($key, $value, $expire);
     }
 
@@ -182,7 +182,7 @@ class TransactionalStore implements KeyValueStoreInterface
      */
     public function cas($token, $key, $value, $expire = 0)
     {
-        $cache = end($this->transactions);
+        $cache = \end($this->transactions);
         return $cache->cas($token, $key, $value, $expire);
     }
 
@@ -191,7 +191,7 @@ class TransactionalStore implements KeyValueStoreInterface
      */
     public function increment($key, $offset = 1, $initial = 0, $expire = 0)
     {
-        $cache = end($this->transactions);
+        $cache = \end($this->transactions);
         return $cache->increment($key, $offset, $initial, $expire);
     }
 
@@ -200,7 +200,7 @@ class TransactionalStore implements KeyValueStoreInterface
      */
     public function decrement($key, $offset = 1, $initial = 0, $expire = 0)
     {
-        $cache = end($this->transactions);
+        $cache = \end($this->transactions);
         return $cache->decrement($key, $offset, $initial, $expire);
     }
 
@@ -209,7 +209,7 @@ class TransactionalStore implements KeyValueStoreInterface
      */
     public function touch($key, $expire)
     {
-        $cache = end($this->transactions);
+        $cache = \end($this->transactions);
         return $cache->touch($key, $expire);
     }
 
@@ -218,7 +218,7 @@ class TransactionalStore implements KeyValueStoreInterface
      */
     public function flush()
     {
-        $cache = end($this->transactions);
+        $cache = \end($this->transactions);
         return $cache->flush();
     }
 
@@ -227,7 +227,7 @@ class TransactionalStore implements KeyValueStoreInterface
      */
     public function getCollection($name)
     {
-        $cache = end($this->transactions);
+        $cache = \end($this->transactions);
         return new static($cache->getCollection($name));
     }
 }

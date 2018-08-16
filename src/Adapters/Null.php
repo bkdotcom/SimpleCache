@@ -49,8 +49,8 @@ class Null extends Base
      */
     public function deleteMultiple(array $keys)
     {
-        $return = array_flip($keys);
-        $return = array_map(function () {
+        $return = \array_flip($keys);
+        $return = \array_map(function () {
             return false;
         }, $return);
         return $return;
@@ -111,7 +111,7 @@ class Null extends Base
      */
     public function setMultiple(array $items, $expire = 0)
     {
-        return array_map(function () {
+        return \array_map(function () {
             return true;
         }, $items);
     }
@@ -122,7 +122,7 @@ class Null extends Base
     /*
     public function touch($key, $expire)
     {
-        if ($expire < 0 || ($expire > 2592000 && $expire < time())) {
+        if ($expire < 0 || ($expire > 2592000 && $expire < \time())) {
             return $this->delete($key);
         }
         try {

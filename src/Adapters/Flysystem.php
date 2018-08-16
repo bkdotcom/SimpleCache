@@ -40,7 +40,7 @@ class Flysystem extends Base
         }
         $expire = $this->expiry($expire);
         $isExisting = $this->exists($key);
-        if ($expire !== 0 && $expire < time()) {
+        if ($expire !== 0 && $expire < \time()) {
             // adding an expired value??
             // just delete it now and be done with it
             $this->unlock($key);
@@ -79,7 +79,7 @@ class Flysystem extends Base
             return false;
         }
         $expire = $this->expiry($expire);
-        if ($expire !== 0 && $expire < time()) {
+        if ($expire !== 0 && $expire < \time()) {
             // setting an expired value??
             // just delete it now and be done with it
             $this->unlock($key);
@@ -89,7 +89,7 @@ class Flysystem extends Base
         $meta = array(
             'e' => $expire,
             // 'eo' => $this->lastGetInfo['expiryOriginal'],
-            'ct' => (microtime(true) - $this->lastGetInfo['microtime']) * 1000000,
+            'ct' => (\microtime(true) - $this->lastGetInfo['microtime']) * 1000000,
         );
         try {
             $success = $this->filesystem->put($path, $this->encode($value, $meta));
@@ -151,9 +151,9 @@ class Flysystem extends Base
         if ($data === false) {
             return false;
         }
-        $rand = mt_rand() / mt_getrandmax();    // random float between 0 and 1 inclusive
-        $isExpired = $data['e'] && $data['e'] < microtime(true) - $data['ct']/1000000 * log($rand);
-        $this->lastGetInfo = array_merge($this->lastGetInfo, array(
+        $rand = \mt_rand() / \mt_getrandmax();    // random float between 0 and 1 inclusive
+        $isExpired = $data['e'] && $data['e'] < \microtime(true) - $data['ct']/1000000 * \log($rand);
+        $this->lastGetInfo = \array_merge($this->lastGetInfo, array(
             'calcTime' => $data['ct'],
             'code' => 'hit',
             'expiry' => $data['e'],
@@ -216,7 +216,7 @@ class Flysystem extends Base
             return false;
         }
         $expire = $this->expiry($expire);
-        if ($expire !== 0 && $expire < time()) {
+        if ($expire !== 0 && $expire < \time()) {
             $this->unlock($key);
             // setting an expired value??
             // just delete it now and be done with it
@@ -229,7 +229,7 @@ class Flysystem extends Base
                 // ? $this->lastGetInfo['expiryOriginal']
                 // : null,
             'ct' => $this->lastGetInfo['key'] == $key
-                ? (microtime(true) - $this->lastGetInfo['microtime']) * 1000000
+                ? (\microtime(true) - $this->lastGetInfo['microtime']) * 1000000
                 : null,
         );
         $success = $this->filesystem->put($path, $this->encode($value, $meta));
@@ -269,41 +269,6 @@ class Flysystem extends Base
     */
 
     /**
-     * decode value & metadata
-     *
-     * @param string $data meta + data string
-     *
-     * @return array
-     */
-    /*
-    protected function decode($data)
-    {
-        $data = explode("\x1D", $data, 2); // \x1D = "Group Separator
-        // $data[0] is meta, $data[1] is value (serialized)
-        return array_merge(unserialize($data[0]), array(
-            'token' => md5($data[1]),
-            'value' => unserialize($data[1]),
-        ));
-    }
-    */
-
-    /**
-     * Build value, token & expiration time to be stored in cache file.
-     *
-     * @param string $value value to store
-     * @param array  $meta  meta information including expire
-     *
-     * @return string
-     */
-    /*
-    protected function encode($value, $meta = array())
-    {
-        $meta['expire'] = $this->expiry($meta['expire']);
-        return serialize($meta)."\x1D".serialize($value);  // \x1D = "Group Separator
-    }
-    */
-
-    /**
      * Check if exists and not expired
      *
      * @param string $key key to check
@@ -317,7 +282,7 @@ class Flysystem extends Base
             return false;
         }
         $expire = $data['e'];
-        if ($expire !== 0 && $expire < time()) {
+        if ($expire !== 0 && $expire < \time()) {
             // expired, don't keep it around
             $path = $this->path($key);
             $this->filesystem->delete($path);
@@ -343,7 +308,7 @@ class Flysystem extends Base
                 $this->filesystem->write($path, '');
                 return true;
             } catch (FileExistsException $e) {
-                usleep(200);
+                \usleep(200);
             }
         }
         return false;

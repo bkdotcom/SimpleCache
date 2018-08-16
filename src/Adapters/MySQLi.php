@@ -38,7 +38,7 @@ class MySQLi extends Base
     public function add($key, $value, $expire = 0)
     {
         $value = $this->serialize($value);
-        $token = md5($value);
+        $token = \md5($value);
         $expiry = $this->expiry($expire);
         $token =
         $this->clearExpired();
@@ -60,10 +60,10 @@ class MySQLi extends Base
     public function cas($token, $key, $value, $expire = 0)
     {
         $value = $this->serialize($value);
-        $tokenNew = md5($value);
+        $tokenNew = \md5($value);
         $expiry = $this->expiry($expire);
         $calcTime = $this->lastGetInfo['key'] == $key
-            ? round((microtime(true) - $this->lastGetInfo['microtime']) * 1000000)
+            ? \round((\microtime(true) - $this->lastGetInfo['microtime']) * 1000000)
             : null;
         $stmt = $this->client->prepare(
             'UPDATE '.$this->table.'
@@ -145,14 +145,14 @@ class MySQLi extends Base
         // we'll need these to figure out which could not be deleted...
         $items = $this->getMultiple($keys);
         // escape input, can't bind multiple params for IN()
-        $escaped = array_map(array($this->client, 'real_escape_string'), $keys);
+        $escaped = \array_map(array($this->client, 'real_escape_string'), $keys);
         $response = $this->client->query(
-            'DELETE FROM '.$this->table.' WHERE k IN ("'.implode('","', $escaped).'")'
+            'DELETE FROM '.$this->table.' WHERE k IN ("'.\implode('","', $escaped).'")'
         );
         $success = $response !== false;
-        $success = array_fill_keys($keys, $success);
+        $success = \array_fill_keys($keys, $success);
         foreach ($keys as $key) {
-            if (!array_key_exists($key, $items)) {
+            if (!\array_key_exists($key, $items)) {
                 $success[$key] = false;
             }
         }
@@ -185,9 +185,9 @@ class MySQLi extends Base
         if (!$success) {
             return false;
         }
-        $rand = mt_rand() / mt_getrandmax();    // random float between 0 and 1 inclusive
-        $isExpired = $data['e'] && $data['e'] < gmdate(self::DATETIME_FORMAT, microtime(true) - $data['ct']/1000000 * log($rand));
-        $this->lastGetInfo = array_merge($this->lastGetInfo, array(
+        $rand = \mt_rand() / \mt_getrandmax();    // random float between 0 and 1 inclusive
+        $isExpired = $data['e'] && $data['e'] < \gmdate(self::DATETIME_FORMAT, \microtime(true) - $data['ct']/1000000 * \log($rand));
+        $this->lastGetInfo = \array_merge($this->lastGetInfo, array(
             'calcTime' => $data['ct'],
             'code' => 'hit',
             'expiry' => $data['e'],
@@ -220,15 +220,15 @@ class MySQLi extends Base
         if (empty($keys)) {
             return array();
         }
-        $escaped = array_map(array($this->client, 'real_escape_string'), $keys);
+        $escaped = \array_map(array($this->client, 'real_escape_string'), $keys);
         $stmt = $this->client->prepare(
             'SELECT k, v, t
             FROM '.$this->table.'
             WHERE
-                k IN ("'.implode('","', $escaped).'") AND
+                k IN ("'.\implode('","', $escaped).'") AND
                 (e IS NULL OR e > ?)'
         );
-        $expiry = gmdate(self::DATETIME_FORMAT);
+        $expiry = \gmdate(self::DATETIME_FORMAT);
         $stmt->bind_param('s', $expiry);
         $stmt->execute();
         $stmt->bind_result($k, $v, $t);
@@ -252,10 +252,10 @@ class MySQLi extends Base
         );
         // $this->clearExpiredMaybe();
         $value = $this->serialize($value);
-        $token = md5($value);
+        $token = \md5($value);
         $expiry = $this->expiry($expire);
         $calcTime = $this->lastGetInfo['key'] == $key
-            ? (microtime(true) - $this->lastGetInfo['microtime']) * 1000000
+            ? (\microtime(true) - $this->lastGetInfo['microtime']) * 1000000
             : 0;
         $stmt->bind_param(
             'ssssi',
@@ -284,9 +284,9 @@ class MySQLi extends Base
         $this->clearExpiredMaybe();
         $stmt = $this->client->prepare(
             'REPLACE INTO '.$this->table.' (k, v, t, e)
-            VALUES '.implode(', ', array_fill(0, count($items), '(?,?,?,?)'))
+            VALUES '.\implode(', ', \array_fill(0, \count($items), '(?,?,?,?)'))
         );
-        $types = str_repeat('ssss', count($items));
+        $types = \str_repeat('ssss', \count($items));
         // we need to pass by reference
         $middleMan = array();
         foreach ($items as $key => $value) {
@@ -295,16 +295,16 @@ class MySQLi extends Base
             $middleMan[$key] = array(
                 'k' => $key,
                 'v' => $value,
-                't' => md5($value),
+                't' => \md5($value),
             );
             $binder[] = &$middleMan[$key]['k'];
             $binder[] = &$middleMan[$key]['v'];
             $binder[] = &$middleMan[$key]['t'];
             $binder[] = &$expiry;
         }
-        call_user_func_array(
+        \call_user_func_array(
             array($stmt, 'bind_param'),
-            array_merge(array($types), $binder)
+            \array_merge(array($types), $binder)
         );
         $stmt->execute();
         $affectedRows = $stmt->affected_rows;
@@ -314,7 +314,7 @@ class MySQLi extends Base
             depending on if REPLACE was an INSERT or UPDATE.
         */
         $success = $affectedRows > 0;
-        return array_fill_keys(array_keys($items), $success);
+        return \array_fill_keys(\array_keys($items), $success);
     }
 
     /**
@@ -332,7 +332,7 @@ class MySQLi extends Base
             'DELETE FROM '.$this->table.'
             WHERE e < ?'
         );
-        $expiry = gmdate(self::DATETIME_FORMAT);
+        $expiry = \gmdate(self::DATETIME_FORMAT);
         $stmt->bind_param('s', $expiry);
         $stmt->execute();
         $stmt->close();
@@ -347,7 +347,7 @@ class MySQLi extends Base
      */
     protected function clearExpiredMaybe()
     {
-        $rand = rand(0, 99);
+        $rand = \rand(0, 99);
         $prob = 10;  // percent
         if ($rand < $prob) {
             $this->clearExpired();
@@ -365,7 +365,7 @@ class MySQLi extends Base
             $success = $this->cas($token, $key, $initial, $expire);
             return $success ? $initial : false;
         }
-        if (!is_numeric($value)) {
+        if (!\is_numeric($value)) {
             return false;
         }
         $value += $offset;
@@ -390,7 +390,7 @@ class MySQLi extends Base
         if ($expiry === 0) {
             return null;
         }
-        return gmdate(self::DATETIME_FORMAT, $expiry);
+        return \gmdate(self::DATETIME_FORMAT, $expiry);
     }
 
     /**
@@ -420,9 +420,9 @@ class MySQLi extends Base
      */
     protected function serialize($value)
     {
-        return is_int($value) || is_float($value)
+        return \is_int($value) || \is_float($value)
             ? $value
-            : serialize($value);
+            : \serialize($value);
     }
 
     /**
@@ -434,7 +434,7 @@ class MySQLi extends Base
      */
     protected function unserialize($value)
     {
-        if (is_numeric($value)) {
+        if (\is_numeric($value)) {
             $int = (int) $value;
             if ((string) $int === $value) {
                 return $int;
@@ -445,6 +445,6 @@ class MySQLi extends Base
             }
             return $value;
         }
-        return unserialize($value);
+        return \unserialize($value);
     }
 }

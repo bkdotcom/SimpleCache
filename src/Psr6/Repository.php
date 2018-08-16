@@ -85,10 +85,10 @@ class Repository
      */
     public function exists($unique)
     {
-        if (array_key_exists($unique, $this->unresolved)) {
+        if (\array_key_exists($unique, $this->unresolved)) {
             $this->resolve();
         }
-        return array_key_exists($unique, $this->resolved);
+        return \array_key_exists($unique, $this->resolved);
     }
 
     /**
@@ -96,11 +96,11 @@ class Repository
      */
     protected function resolve()
     {
-        $keys = array_unique(array_values($this->unresolved));
+        $keys = \array_unique(\array_values($this->unresolved));
         $values = $this->store->getMulti($keys);
 
         foreach ($this->unresolved as $unique => $key) {
-            if (!array_key_exists($key, $values)) {
+            if (!\array_key_exists($key, $values)) {
                 // key doesn't exist in cache
                 continue;
             }
@@ -112,7 +112,7 @@ class Repository
                 would be passed by-ref without the cloning)
             */
             $value = $values[$key];
-            $value = is_object($value) ? clone $value : $value;
+            $value = \is_object($value) ? clone $value : $value;
             $this->resolved[$unique] = $value;
         }
         $this->unresolved = array();

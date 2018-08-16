@@ -46,7 +46,7 @@ abstract class PdoBase extends Base
     public function add($key, $value, $expire = 0)
     {
         $value = $this->serialize($value);
-        $token = md5($value);
+        $token = \md5($value);
         $this->clearExpired();
         $statement = $this->client->prepare(
             'INSERT INTO '.$this->table.' (k, v, t, e)
@@ -68,7 +68,7 @@ abstract class PdoBase extends Base
     {
         $expiry = $this->expiry($expire);
         $value = $this->serialize($value);
-        $tokenNew = md5($value);
+        $tokenNew = \md5($value);
         $statement = $this->client->prepare(
             'UPDATE '.$this->table.'
             SET v = :value, t = :tokenNew, e = :expiry, ct = :calcTime
@@ -84,7 +84,7 @@ abstract class PdoBase extends Base
                 // ? $this->lastGetInfo['expiryOriginal']
                 // : $expire,
             ':calcTime' => $this->lastGetInfo['key'] == $key
-                ? round((microtime(true) - $this->lastGetInfo['microtime']) * 1000000)
+                ? \round((\microtime(true) - $this->lastGetInfo['microtime']) * 1000000)
                 : null
         ));
         if ($statement->rowCount() === 1) {
@@ -151,12 +151,12 @@ abstract class PdoBase extends Base
             $quoted[] = $this->client->quote($key);
         }
         $statement = $this->client->query(
-            'DELETE FROM '.$this->table.' WHERE k IN ('.implode(',', $quoted).')'
+            'DELETE FROM '.$this->table.' WHERE k IN ('.\implode(',', $quoted).')'
         );
         $success = $statement->rowCount() !== 0;
-        $success = array_fill_keys($keys, $success);
+        $success = \array_fill_keys($keys, $success);
         foreach ($keys as $key) {
-            if (!array_key_exists($key, $items)) {
+            if (!\array_key_exists($key, $items)) {
                 $success[$key] = false;
             }
         }
@@ -183,9 +183,9 @@ abstract class PdoBase extends Base
         if (!$data) {
             return false;
         }
-        $rand = mt_rand() / mt_getrandmax();    // random float between 0 and 1 inclusive
-        $isExpired = $data['e'] && $data['e'] < gmdate(self::DATETIME_FORMAT, microtime(true) - $data['ct']/1000000 * log($rand));
-        $this->lastGetInfo = array_merge($this->lastGetInfo, array(
+        $rand = \mt_rand() / \mt_getrandmax();    // random float between 0 and 1 inclusive
+        $isExpired = $data['e'] && $data['e'] < \gmdate(self::DATETIME_FORMAT, \microtime(true) - $data['ct']/1000000 * \log($rand));
+        $this->lastGetInfo = \array_merge($this->lastGetInfo, array(
             'calcTime' => $data['ct'],
             'code' => 'hit',
             'expiry' => $data['e'],
@@ -227,13 +227,13 @@ abstract class PdoBase extends Base
             'SELECT k, v, t
             FROM '.$this->table.'
             WHERE
-                k IN ('.implode(',', $quoted).') AND
+                k IN ('.\implode(',', $quoted).') AND
                 (e IS NULL OR e > :expiry)'
         );
-        $statement->execute(array(':expiry' => gmdate(self::DATETIME_FORMAT)));
+        $statement->execute(array(':expiry' => \gmdate(self::DATETIME_FORMAT)));
         $rows = $statement->fetchAll(PDO::FETCH_ASSOC);
         $return = array();
-        $tokens = array_column($rows, 't', 'k');
+        $tokens = \array_column($rows, 't', 'k');
         foreach ($rows as $row) {
             $return[$row['k']] = $this->unserialize($row['v']);
         }
@@ -298,10 +298,10 @@ abstract class PdoBase extends Base
         return $statement->execute(array(
             ':key' => $key,
             ':value' => $value,
-            ':token' => md5($value),
+            ':token' => \md5($value),
             ':expiry' => $this->expiry($expire),
             ':calcTime' => $this->lastGetInfo['key'] == $key
-                ? round((microtime(true) - $this->lastGetInfo['microtime']) * 1000000)
+                ? \round((\microtime(true) - $this->lastGetInfo['microtime']) * 1000000)
                 : 0,
         ));
     }
@@ -371,7 +371,7 @@ abstract class PdoBase extends Base
                 $this->client->commit();
                 return $initial;
             }
-        } elseif (is_numeric($value)) {
+        } elseif (\is_numeric($value)) {
             $value += $offset;
             $return = $this->replace($key, $value, $expire);
             if ($return) {
@@ -395,7 +395,7 @@ abstract class PdoBase extends Base
             }
             */
         }
-        if (!is_numeric($value)) {
+        if (!\is_numeric($value)) {
             return false;
         }
         $value += $offset;
@@ -418,7 +418,7 @@ abstract class PdoBase extends Base
             'DELETE FROM '.$this->table.'
             WHERE e < :expiry'
         );
-        $statement->execute(array(':expiry' => gmdate(self::DATETIME_FORMAT)));
+        $statement->execute(array(':expiry' => \gmdate(self::DATETIME_FORMAT)));
     }
 
     /**
@@ -430,7 +430,7 @@ abstract class PdoBase extends Base
      */
     protected function clearExpiredMaybe()
     {
-        $rand = rand(0, 99);
+        $rand = \rand(0, 99);
         $prob = 10;  // percent
         if ($rand < $prob) {
             $this->clearExpired();
@@ -454,7 +454,7 @@ abstract class PdoBase extends Base
         if ($expiry === 0) {
             return null;
         }
-        return gmdate(self::DATETIME_FORMAT, $expiry);
+        return \gmdate(self::DATETIME_FORMAT, $expiry);
     }
 
     /**
@@ -466,9 +466,9 @@ abstract class PdoBase extends Base
      */
     protected function serialize($value)
     {
-        return is_int($value) || is_float($value)
+        return \is_int($value) || \is_float($value)
             ? $value
-            : serialize($value);
+            : \serialize($value);
     }
 
     /**
@@ -480,7 +480,7 @@ abstract class PdoBase extends Base
      */
     protected function unserialize($value)
     {
-        if (is_numeric($value)) {
+        if (\is_numeric($value)) {
             $int = (int) $value;
             if ((string) $int === $value) {
                 return $int;
@@ -491,6 +491,6 @@ abstract class PdoBase extends Base
             }
             return $value;
         }
-        return unserialize($value);
+        return \unserialize($value);
     }
 }

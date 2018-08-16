@@ -60,7 +60,7 @@ class Redis extends Base
         $this->client->expire($key, $ttl);
         /** @var bool[] $return */
         $return = (array) $this->client->exec();
-        return !in_array(false, $return);
+        return !\in_array(false, $return);
     }
 
     /**
@@ -75,7 +75,7 @@ class Redis extends Base
                 HHVM Redis only got unwatch recently
                 @see https://github.com/asgrim/hhvm/commit/bf5a259cece5df8a7617133c85043608d1ad5316
             */
-            if (method_exists($this->client, 'unwatch')) {
+            if (\method_exists($this->client, 'unwatch')) {
                 $this->client->unwatch();
             } else {
                 // this should also kill the watch...
@@ -100,7 +100,7 @@ class Redis extends Base
         }
         /** @var bool[] $return */
         $return = (array) $this->client->exec();
-        return !in_array(false, $return);
+        return !\in_array(false, $return);
     }
 
     /**
@@ -136,7 +136,7 @@ class Redis extends Base
         $this->client->del($keys);
         $return = array();
         foreach ($keys as $key) {
-            $return[$key] = array_key_exists($key, $items);
+            $return[$key] = \array_key_exists($key, $items);
         }
         return $return;
     }
@@ -161,13 +161,13 @@ class Redis extends Base
         if (!$exists) {
             return false;
         }
-        $rand = mt_rand() / mt_getrandmax();    // random float between 0 and 1 inclusive
-        $isExpired = $data['e'] && $data['e'] < microtime(true) - $data['ct']/1000000 * log($rand);
-        $this->lastGetInfo = array_merge($this->lastGetInfo, array(
+        $rand = \mt_rand() / \mt_getrandmax();    // random float between 0 and 1 inclusive
+        $isExpired = $data['e'] && $data['e'] < \microtime(true) - $data['ct']/1000000 * \log($rand);
+        $this->lastGetInfo = \array_merge($this->lastGetInfo, array(
             'calcTime' => $data['ct'],
             'code' => 'hit',
             'expiry' => $data['e'],
-            'token' => md5(serialize($data['v'])),
+            'token' => \md5(\serialize($data['v'])),
         ));
         if ($isExpired) {
             $this->lastGetInfo['code'] = 'expired';
@@ -183,9 +183,9 @@ class Redis extends Base
      */
     public function getCollection($name)
     {
-        if (!is_numeric($name)) {
+        if (!\is_numeric($name)) {
             throw new InvalidCollection(
-                'Redis database names must be numeric. '.serialize($name).' given.'
+                'Redis database names must be numeric. '.\serialize($name).' given.'
             );
         }
         // we can't reuse $this->client in a different object, because it'll
@@ -234,28 +234,28 @@ class Redis extends Base
         if ($return === false) {
             return array();
         }
-        $values = array_shift($return);
+        $values = \array_shift($return);
         $exists = $return;
         if ($values === false) {
-            $values = array_fill_keys($keys, false);
+            $values = \array_fill_keys($keys, false);
         }
-        $values = array_combine($keys, $values);
-        $exists = array_combine($keys, $exists);
+        $values = \array_combine($keys, $values);
+        $exists = \array_combine($keys, $exists);
         $tokens = array();
-        $rand = mt_rand() / mt_getrandmax();    // random float between 0 and 1 inclusive
+        $rand = \mt_rand() / \mt_getrandmax();    // random float between 0 and 1 inclusive
         foreach ($values as $key => $data) {
             if ($exists[$key] === false) {
                 // remove non-existing value
                 unset($values[$key]);
                 continue;
             }
-            $isExpired = $data['e'] && $data['e'] < microtime(true) - $data['ct']/1000000 * log($rand);
+            $isExpired = $data['e'] && $data['e'] < \microtime(true) - $data['ct']/1000000 * \log($rand);
             if ($isExpired) {
                 unset($values[$key]);
                 continue;
             }
             $values[$key] = $data['v'];
-            $tokens[$key] = md5(serialize($data['v']));
+            $tokens[$key] = \md5(\serialize($data['v']));
         }
         return $values;
     }
@@ -318,7 +318,7 @@ class Redis extends Base
                 HHVM Redis only got unwatch recently
                 @see https://github.com/asgrim/hhvm/commit/bf5a259cece5df8a7617133c85043608d1ad5316
             */
-            if (method_exists($this->client, 'unwatch')) {
+            if (\method_exists($this->client, 'unwatch')) {
                 $this->client->unwatch();
             } else {
                 // this should also kill the watch...
@@ -336,7 +336,7 @@ class Redis extends Base
         }
         /** @var bool[] $return */
         $return = (array) $this->client->exec();
-        return !in_array(false, $return);
+        return !\in_array(false, $return);
     }
 
     /**
@@ -376,8 +376,8 @@ class Redis extends Base
         $ttl = $this->ttl($expiry);
         if ($ttl < 0) {
             // just delete em now and be done with it
-            $this->deleteMultiple(array_keys($items));
-            return array_fill_keys(array_keys($items), true);
+            $this->deleteMultiple(\array_keys($items));
+            return \array_fill_keys(\array_keys($items), true);
         }
         foreach ($items as $key => $value) {
             $items[$key] = array(
@@ -388,20 +388,20 @@ class Redis extends Base
         }
         if ($ttl === 0) {
             $success = $this->client->mset($items);
-            return array_fill_keys(array_keys($items), $success);
+            return \array_fill_keys(\array_keys($items), $success);
         }
         $ttlExtended = $this->ttlExtend($ttl);
         $this->client->multi();
         $this->client->mset($items);
         // Redis has no convenient multi-expire method
-        foreach (array_keys($items) as $key) {
+        foreach (\array_keys($items) as $key) {
             $this->client->expire($key, $ttlExtended);
         }
         /* @var bool[] $return */
         $result = (array) $this->client->exec();
         $return = array();
-        $keys = array_keys($items);
-        $success = array_shift($result);
+        $keys = \array_keys($items);
+        $success = \array_shift($result);
         foreach ($result as $i => $value) {
             $key = $keys[$i];
             $return[$key] = $success && $value;
@@ -450,16 +450,16 @@ class Redis extends Base
                 'ct' => null,
             ), $this->ttlExtend($ttl));
             $return = (array) $this->client->exec();
-            return !in_array(false, $return) ? $initial : false;
+            return !\in_array(false, $return) ? $initial : false;
         }
         $value = $value['v'];
         // can't increment if a non-numeric value is set
-        if (!is_numeric($value)) {
+        if (!\is_numeric($value)) {
             /*
                 HHVM Redis only got unwatch recently.
                 @see https://github.com/asgrim/hhvm/commit/bf5a259cece5df8a7617133c85043608d1ad5316
             */
-            if (method_exists($this->client, 'unwatch')) {
+            if (\method_exists($this->client, 'unwatch')) {
                 $this->client->unwatch();
             } else {
                 // this should also kill the watch...
@@ -479,7 +479,7 @@ class Redis extends Base
             ), $this->ttlExtend($ttl));
         }
         $return = (array) $this->client->exec();
-        return !in_array(false, $return) ? $value : false;
+        return !\in_array(false, $return) ? $value : false;
     }
 
     /**
@@ -503,7 +503,7 @@ class Redis extends Base
      */
     protected function supportsOptionsArray()
     {
-        return version_compare($this->getVersion(), '2.6.12') >= 0;
+        return \version_compare($this->getVersion(), '2.6.12') >= 0;
     }
 
     /**
@@ -522,7 +522,7 @@ class Redis extends Base
             return null;
         }
         if ($ttl > 0) {
-            $ttl = $ttl + min(60*60, max(60, $ttl * 0.25));
+            $ttl = $ttl + \min(60*60, \max(60, $ttl * 0.25));
         }
         return $ttl;
     }
