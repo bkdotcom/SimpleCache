@@ -1,16 +1,16 @@
 <?php
 
-namespace MatthiasMullie\Scrapbook\Tests\Scale;
+namespace bdk\SimpleCache\Tests\Scale;
 
-use MatthiasMullie\Scrapbook\Adapters\Apc;
-use MatthiasMullie\Scrapbook\Adapters\Couchbase;
-use MatthiasMullie\Scrapbook\Adapters\Memcached;
-use MatthiasMullie\Scrapbook\Adapters\MemoryStore;
-use MatthiasMullie\Scrapbook\Adapters\Redis;
-use MatthiasMullie\Scrapbook\Adapters\SQL;
-use MatthiasMullie\Scrapbook\KeyValueStore;
-use MatthiasMullie\Scrapbook\Tests\AdapterTestProvider;
-use MatthiasMullie\Scrapbook\Tests\AdapterTestCase;
+use bdk\SimpleCache\Adapters\Apc;
+use bdk\SimpleCache\Adapters\Couchbase;
+use bdk\SimpleCache\Adapters\Memcached;
+use bdk\SimpleCache\Adapters\Memory;
+use bdk\SimpleCache\Adapters\Redis;
+use bdk\SimpleCache\Adapters\SQL;
+use bdk\SimpleCache\KeyValueStoreInterface;
+use bdk\SimpleCache\Tests\AdapterTestProvider;
+use bdk\SimpleCache\Tests\AdapterTestCase;
 
 class StampedeProtectorTest extends AdapterTestCase
 {
@@ -26,10 +26,10 @@ class StampedeProtectorTest extends AdapterTestCase
      */
     protected $protector;
 
-    public function setAdapter(KeyValueStore $adapter)
+    public function setAdapter(KeyValueStoreInterface $kvs)
     {
-        $this->cache = $adapter;
-        $this->protector = new StampedeProtectorStub($adapter, static::SLA);
+        $this->cache = $kvs;
+        $this->protector = new StampedeProtectorStub($kvs, static::SLA);
     }
 
     public function testGetExisting()
@@ -86,7 +86,7 @@ class StampedeProtectorTest extends AdapterTestCase
              * start testing stampede protection until the other thread has done
              * the first request though, so let's wait a bit...
              */
-            while ($this->cache->getMulti(array('key', 'key.stampede')) === array()) {
+            while ($this->cache->getMultiple(array('key', 'key.stampede')) === array()) {
                 usleep(10);
             }
 
@@ -101,7 +101,7 @@ class StampedeProtectorTest extends AdapterTestCase
 
     public function testGetMultiExisting()
     {
-        $this->cache->setMulti(array('key' => 'value', 'key2' => 'value2'));
+        $this->cache->setMultiple(array('key' => 'value', 'key2' => 'value2'));
 
         /*
          * Verify that we WERE able to fetch the values, DIDN'T wait & DIDN'T
@@ -109,12 +109,12 @@ class StampedeProtectorTest extends AdapterTestCase
          */
         $this->assertEquals(
             array('key' => 'value', 'key2' => 'value2'),
-            $this->protector->getMulti(array('key', 'key2'))
+            $this->protector->getMultiple(array('key', 'key2'))
         );
         $this->assertEquals(0, $this->protector->count);
         $this->assertEquals(
             array(),
-            $this->cache->getMulti(array('key.stampede', 'key2.stampede'))
+            $this->cache->getMultiple(array('key.stampede', 'key2.stampede'))
         );
     }
 
@@ -126,12 +126,12 @@ class StampedeProtectorTest extends AdapterTestCase
          */
         $this->assertEquals(
             array(),
-            $this->protector->getMulti(array('key', 'key2'))
+            $this->protector->getMultiple(array('key', 'key2'))
         );
         $this->assertEquals(0, $this->protector->count);
         $this->assertEquals(
             array('key.stampede' => '', 'key2.stampede' => ''),
-            $this->cache->getMulti(array('key.stampede', 'key2.stampede'))
+            $this->cache->getMultiple(array('key.stampede', 'key2.stampede'))
         );
     }
 
@@ -145,12 +145,12 @@ class StampedeProtectorTest extends AdapterTestCase
          */
         $this->assertEquals(
             array('key' => 'value'),
-            $this->protector->getMulti(array('key', 'key2'))
+            $this->protector->getMultiple(array('key', 'key2'))
         );
         $this->assertEquals(0, $this->protector->count);
         $this->assertEquals(
             array('key2.stampede' => ''),
-            $this->cache->getMulti(array('key.stampede', 'key2.stampede'))
+            $this->cache->getMultiple(array('key.stampede', 'key2.stampede'))
         );
     }
 
@@ -168,7 +168,7 @@ class StampedeProtectorTest extends AdapterTestCase
         } elseif ($pid === 0) {
             // request non-existing key: this should make us go in stampede-
             // protection mode if another process/thread requests it again...
-            $this->protector->getMulti(array('key', 'key2'));
+            $this->protector->getMultiple(array('key', 'key2'));
 
             // meanwhile, sleep for a small portion of the stampede-protection
             // time - this could be an expensive computation
@@ -186,7 +186,7 @@ class StampedeProtectorTest extends AdapterTestCase
              * start testing stampede protection until the other thread has done
              * the first request though, so let's wait a bit...
              */
-            while ($this->cache->getMulti(array('key', 'key.stampede')) === array()) {
+            while ($this->cache->getMultiple(array('key', 'key.stampede')) === array()) {
                 usleep(10);
             }
 
@@ -194,7 +194,7 @@ class StampedeProtectorTest extends AdapterTestCase
             // some time because we were in stampede protection
             $this->assertEquals(
                 array('key' => 'value', 'key2' => 'value2'),
-                $this->protector->getMulti(array('key', 'key2'))
+                $this->protector->getMultiple(array('key', 'key2'))
             );
             $this->assertGreaterThan(0, $this->protector->count);
 
@@ -235,43 +235,43 @@ class StampedeProtectorTest extends AdapterTestCase
      *
      * @return bool
      */
-    protected function forkableAdapter(KeyValueStore $cache)
+    protected function forkableAdapter(KeyValueStoreInterface $kvs)
     {
-        // MemoryStore can't share it's "cache" (which is a PHP array) across
+        // Memory adapter can't share its "cache" (which is a PHP array) across
         // processes. Not only does stampede protection make no sense here, we
         // can't even properly test it.
-        if ($cache instanceof MemoryStore) {
+        if ($kvs instanceof Memory) {
             return false;
         }
 
         // Memcached may become unreliable when forked
         // https://gist.github.com/matthiasmullie/e5e856b27ddb68d7cf80
-        if ($cache instanceof Memcached) {
+        if ($kvs instanceof Memcached) {
             return false;
         }
 
         // Couchbase, or at least in the config we're using it for tests, is
         // just like Memcached...
-        if ($cache instanceof Couchbase) {
+        if ($kvs instanceof Couchbase) {
             return false;
         }
 
         // php-redis is known to exhibit connection issues because of pcntl_fork
         // https://github.com/phpredis/phpredis/issues/474
-        if ($cache instanceof Redis) {
+        if ($kvs instanceof Redis) {
             return false;
         }
 
         // PDO connection is closed as soon as first thread finishes
         // http://php.net/manual/en/function.pcntl-fork.php#70721
         // https://bugs.php.net/bug.php?id=62571
-        if ($cache instanceof SQL) {
+        if ($kvs instanceof SQL) {
             return false;
         }
 
         // Looks like Apc, threading & HHVM are not the greatest combo either...
         // https://travis-ci.org/matthiasmullie/scrapbook/jobs/91360815
-        if ($cache instanceof Apc && defined('HHVM_VERSION')) {
+        if ($kvs instanceof Apc && defined('HHVM_VERSION')) {
             return false;
         }
 

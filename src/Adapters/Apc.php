@@ -334,7 +334,6 @@ class Apc extends Base
     /**
      * {@inheritdoc}
      */
-    /*
     public function touch($key, $expire)
     {
         $ttl = $this->ttl($expire);
@@ -359,7 +358,6 @@ class Apc extends Base
         $token = \serialize($value);
         return $this->cas($token, $key, $value, $ttl);
     }
-    */
 
     /*
         Protected/internal
@@ -651,7 +649,7 @@ class Apc extends Base
         if ($ttl > 0) {
             $ttl = $ttl + \min(60*60, \max(60, $ttl * 0.25));
         }
-        return $ttl;
+        return (int) $ttl;
     }
 
     /**

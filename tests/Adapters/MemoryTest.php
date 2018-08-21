@@ -7,7 +7,7 @@ use ReflectionObject;
 
 /**
  * @group default
- * @group MemoryStore
+ * @group Memory
  */
 class MemoryTest extends TestCase
 {

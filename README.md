@@ -258,26 +258,26 @@ of any adapter.
 
 ## Local buffer
 
-BufferedStore helps reduce requests to your real cache. If you need the request
+Buffered wrapper helps reduce requests to your real cache. If you need the request
 the same value more than once (from various places in your code), it can be a
 pain to keep that value around. Requesting it again from cache would be easier,
 but then you get some latency from the connection to the cache server.
 
-BufferedStore will keep known values (items that you've already requested or
+Buffered will keep known values (items that you've already requested or
 written yourself) in memory. Every time you need that value in the same request,
 it'll just get it from memory instead of going out to the cache server.
 
-Just wrap the BufferedStore layer around your adapter (or other features):
+Just wrap the Buffered class around your adapter (or other features):
 
 ```php
 // create buffered cache layer over our real cache
-$cache = new \bdk\SimpleCache\Buffered\BufferedStore($cache);
+$cache = new \bdk\SimpleCache\Buffered\Buffered($cache);
 ```
 
 
 ## Transactions
 
-TransactionalStore makes it possible to defer writes to a later point in time.
+Transactional wrapper makes it possible to defer writes to a later point in time.
 Similar to transactions in databases, all deferred writes can be rolled back or
 committed all at once to ensure the data that is stored is reliable and
 complete. All of it will be stored, or nothing at all.
@@ -294,11 +294,11 @@ query for it. Should you rollback, or fail to commit (because data stored by
 another process caused your commit to fail), then you'll get the original value
 from cache instead of the one your intended to commit.
 
-Just wrap the TransactionalStore layer around your adapter (or other features):
+Just wrap your KeyValueStore adapter inside the Transactional wrapper:
 
 ```php
 // create transactional cache layer over our real cache
-$cache = new \bdk\SimpleCache\Buffered\TransactionalStore($cache);
+$cache = new \bdk\SimpleCache\Buffered\Transactional($keyValueStore);
 ```
 
 And TA-DA, you can use transactions!
@@ -400,8 +400,8 @@ KeyValueStore, and then there are 2 PSR interfaces put forward by the PHP FIG.
 ## KeyValueStore
 
 KeyValueStore is the cornerstone of this project. It is the interface that
-provides the most cache operations: `get`, `getMulti`, `set`, `setMultiple`,
-`delete`, `deleteMulti`, `add`, `replace`, `cas`, `increment`, `decrement`,
+provides the most cache operations: `get`, `getMultiple`, `set`, `setMultiple`,
+`delete`, `deleteMultiple`, `add`, `replace`, `cas`, `increment`, `decrement`,
 `touch` & `flush`.
 
 If you've ever used Memcached before, KeyValueStore will look very similar,
@@ -510,11 +510,11 @@ $sessionCache->set('key', 'value three');
 
 // this clears our the entire 'articles' subset (thus removing 'value two'),
 // while leaving everything else untouched
-$articleCache->flush();
+$articleCache->clear();
 
 // this removes everything from the server, including all of its subsets
 // ('value one' and 'value three' will also be deleted)
-$cache->flush();
+$cache->clear();
 ```
 
 `getCollection` is available on all KeyValueStore implementations (so for every

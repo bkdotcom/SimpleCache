@@ -5,18 +5,18 @@ namespace bdk\SimpleCache\Buffered\Utils;
 use bdk\SimpleCache\Adapters\Memory;
 
 /**
- * This is a helper class for BufferedStore & TransactionalStore, which buffer
+ * This is a helper class for Buffered & Transactional adapters, which buffer
  * real cache requests in memory.
- * The memory-part can easily be handled by MemoryStore. There's just 1 gotcha:
+ * The memory-part can easily be handled by Memory adapter. There's just 1 gotcha:
  * when an item is to be deleted (but not yet committed), it needs to be deleted
- * from the MemoryStore too, but we need to be able to make a distinction
+ * from the Memory too, but we need to be able to make a distinction
  * between "this is deleted" and "this value is not known in this memory cache,
  * fall back to real cache".
  *
  * This is where this class comes in to play: we'll add an additional "expired"
- * method, which allows BufferedStore to just expire the keys that are supposed
+ * method, which allows Buffered to just expire the keys that are supposed
  * to be deleted (instead of deleting them) - then we can keep track of when
- * a key is just not known, or known-but-deleted (=expired)
+ * a key is not known vs known-but-deleted (=expired)
  */
 class Buffer extends Memory
 {
@@ -31,7 +31,7 @@ class Buffer extends Memory
 
     /**
      * Checks if a value exists in cache and is not yet expired.
-     * Contrary to default MemoryStore, expired items must *not* be deleted
+     * Contrary to default Memory, expired items must *not* be deleted
      * from memory: we need to remember that they were expired, so we don't
      * reach out to real cache (only to get nothing, since it's expired...).
      *
@@ -45,15 +45,12 @@ class Buffer extends Memory
             // key not in cache
             return false;
         }
-
         $expire = $this->items[$key][1];
         if ($expire !== 0 && $expire < \time()) {
             // not permanent & already expired
             return false;
         }
-
         $this->lru($key);
-
         return true;
     }
 

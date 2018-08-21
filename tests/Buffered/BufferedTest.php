@@ -1,22 +1,22 @@
 <?php
 
-namespace MatthiasMullie\Scrapbook\Tests\Buffered;
+namespace bdk\SimpleCache\Tests\Buffered;
 
-use MatthiasMullie\Scrapbook\Buffered\BufferedStore;
-use MatthiasMullie\Scrapbook\KeyValueStore;
-use MatthiasMullie\Scrapbook\Tests\AdapterTestCase;
+use bdk\SimpleCache\Buffered\Buffered;
+use bdk\SimpleCache\KeyValueStoreInterface;
+use bdk\SimpleCache\Tests\AdapterTestCase;
 
-class BufferedStoreTest extends AdapterTestCase
+class BufferedTest extends AdapterTestCase
 {
     /**
-     * @var BufferedStore
+     * @var Buffered
      */
     protected $buffered;
 
-    public function setAdapter(KeyValueStore $adapter)
+    public function setAdapter(KeyValueStoreInterface $adapter)
     {
         $this->cache = $adapter;
-        $this->buffered = new BufferedStore($adapter);
+        $this->buffered = new Buffered($adapter);
     }
 
     public function testGetFromCache()

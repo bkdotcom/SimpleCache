@@ -33,17 +33,17 @@ class Item implements CacheItemInterface
     protected $value;
 
     /**
-     * @var int
+     * @var integer
      */
     protected $expire = 0;
 
     /**
-     * @var bool
+     * @var boolean
      */
     protected $isHit = null;
 
     /**
-     * @var bool
+     * @var boolean
      */
     protected $changed = false;
 
@@ -56,20 +56,18 @@ class Item implements CacheItemInterface
         $this->key = $key;
 
         /*
-         * Register this key (tied to this particular object) to the value
-         * repository.
-         *
-         * If 1 key is requested multiple times, the value could be an object
-         * that could be altered (by reference) and if all objects-for-same-key
-         * reference that same value, all would've been changed (because all
-         * would be that exact same value.)
-         *
-         * I'm using spl_object_hash to get a unique identifier linking $key to
-         * this particular object, without using this object itself (I could use
-         * SplObjectStorage.) If I stored this object, it wouldn't be destructed
-         * when it's no longer needed, and I want it to destruct so I can free
-         * up this value in the repository when it's no longer needed.
-         */
+            Register this key (tied to this particular object) to the value
+            repository.
+
+            If 1 key is requested multiple times, the value could be an object
+            that could be altered (by reference) and if all objects-for-same-key
+            reference that same value, all would've been changed (because all
+            would be that exact same value.)
+
+            Using spl_object_hash to get a unique identifier linking $key to
+            this particular object, without using this object itself (SplObjectStorage).
+            If we stored this object, it wouldn't be destructed when it's no longer needed.
+        */
         $this->repository = $repository;
         $this->hash = \spl_object_hash($this);
         $this->repository->add($this->hash, $this->key);
@@ -101,12 +99,10 @@ class Item implements CacheItemInterface
         if ($this->value !== null) {
             return $this->value;
         }
-
         // sanity check
         if (!$this->isHit()) {
             return;
         }
-
         return $this->repository->get($this->hash);
     }
 
@@ -117,7 +113,6 @@ class Item implements CacheItemInterface
     {
         $this->value = $value;
         $this->changed = true;
-
         return $this;
     }
 
@@ -129,7 +124,6 @@ class Item implements CacheItemInterface
         if ($this->isHit !== null) {
             return $this->isHit;
         }
-
         return $this->repository->exists($this->hash);
     }
 
@@ -157,7 +151,6 @@ class Item implements CacheItemInterface
             }
             \trigger_error($error, E_USER_ERROR);
         }
-
         return $this;
     }
 
@@ -183,7 +176,6 @@ class Item implements CacheItemInterface
             );
         }
         $this->changed = true;
-
         return $this;
     }
 
@@ -191,7 +183,7 @@ class Item implements CacheItemInterface
      * Returns the set expiration time in integer form (as it's what
      * KeyValueStore expects).
      *
-     * @return int
+     * @return integer
      */
     public function getExpiration()
     {
@@ -201,12 +193,11 @@ class Item implements CacheItemInterface
     /**
      * Returns true if the item is already expired, false otherwise.
      *
-     * @return bool
+     * @return boolean
      */
     public function isExpired()
     {
         $expire = $this->getExpiration();
-
         return $expire !== 0 && $expire < \time();
     }
 
@@ -214,7 +205,7 @@ class Item implements CacheItemInterface
      * We'll want to know if this Item was altered (value or expiration date)
      * once we'll want to store it.
      *
-     * @return bool
+     * @return boolean
      */
     public function hasChanged()
     {
@@ -225,7 +216,9 @@ class Item implements CacheItemInterface
      * Allow isHit to be override, in case it's a value that is returned from
      * memory, when a value is being saved deferred.
      *
-     * @param bool $isHit
+     * @param boolean $isHit
+     *
+     * @return void
      */
     public function overrideIsHit($isHit)
     {

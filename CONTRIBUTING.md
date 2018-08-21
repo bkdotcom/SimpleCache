@@ -21,7 +21,7 @@ it turned down, please start the discussion by
 Where applicable, new features should follow the existing model of wrapping them
 around a KeyValueStore object, which is in turn also a KeyValueStore. Like how
 an adapter can be wrapped inside a StampedeProtected, which can in turn be
-wrapped inside a TransactionalStore. This keeps functionality nicely isolated
+wrapped inside a Transactional. This keeps functionality nicely isolated
 (single responsibility) while still offering a consistent API.
 
 Don't forget to add your changes to the [changelog](CHANGELOG.md).

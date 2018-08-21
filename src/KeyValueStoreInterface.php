@@ -169,7 +169,7 @@ interface KeyValueStoreInterface
      * [key => token] format. Keys missing in cache will be omitted from the
      * array.
      *
-     * getMulti is preferred over multiple individual get operations as you'll
+     * getMultiple is preferred over multiple individual get operations as you'll
      * get them all in 1 request.
      *
      * @param array   $keys   keys to get
@@ -187,19 +187,19 @@ interface KeyValueStoreInterface
      * There are conditions where value may be expired, yet getter will not be called
      * In expired value will be returned
      * * stampeed protection:  another process is refreshing the cache
-     * * getter recently failed and failDelay time has not ellapsed
+     * * getter recently failed and failExtend time has not ellapsed
      *
-     * @param string   $key       key to set
-     * @param callable $getter    callable called if key is a miss
-     * @param integer  $expire    Time when item falls out of the cache:
+     * @param string   $key        key to set
+     * @param callable $getter     callable called if key is a miss
+     * @param integer  $expire     Time when item falls out of the cache:
      *                       0 = permanent (doesn't expire);
      *                       under 2592000 (30 days) = relative time, in seconds from now;
      *                       over 2592000 = absolute time, unix timestamp
-     * @param integer  $failDelay If getter fails, how long before retry (seconds)
+     * @param integer  $failExtend If getter fails, by how much do we extend expiration (seconds) ?
      *
      * @return mixed
      */
-    public function getSet($key, callable $getter, $expire = 0, $failDelay = 60);
+    public function getSet($key, callable $getter, $expire = 0, $failExtend = 60);
 
     /**
      * Increments a counter value, or sets an initial value if it does not yet exist.
@@ -266,7 +266,7 @@ interface KeyValueStoreInterface
      * Return value will be an associative array in [key => status] form, where
      * status is a boolean true for success, or false for failure.
      *
-     * setMulti is preferred over multiple individual set operations as you'll
+     * setMultiple is preferred over multiple individual set operations as you'll
      * set them all in 1 request.
      *
      * @param mixed[] $items  [key => value]
@@ -294,5 +294,5 @@ interface KeyValueStoreInterface
      *
      * @return boolean
      */
-    // public function touch($key, $expire);
+    public function touch($key, $expire);
 }

@@ -236,14 +236,11 @@ class Memory extends Base
     /**
      * {@inheritdoc}
      */
-    /*
     public function touch($key, $expire)
     {
-        $expire = $this->normalizeTime($expire);
         $value = $this->get($key, $token);
         return $this->cas($token, $key, $value, $expire);
     }
-    */
 
     /*
         Protected/internal

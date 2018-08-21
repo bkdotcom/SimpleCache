@@ -1,9 +1,9 @@
 <?php
 
-namespace MatthiasMullie\Scrapbook\Tests\Scale;
+namespace bdk\SimpleCache\Tests\Scale;
 
-use MatthiasMullie\Scrapbook\KeyValueStore;
-use MatthiasMullie\Scrapbook\Tests\AdapterTest;
+use bdk\SimpleCache\KeyValueStoreInterface;
+use bdk\SimpleCache\Tests\AdapterTest;
 
 class StampedeProtectorAdapterTest extends AdapterTest
 {
@@ -14,8 +14,8 @@ class StampedeProtectorAdapterTest extends AdapterTest
      */
     const SLA = 100;
 
-    public function setAdapter(KeyValueStore $adapter)
+    public function setAdapter(KeyValueStoreInterface $kvs)
     {
-        $this->cache = new StampedeProtectorStub($adapter, static::SLA);
+        $this->cache = new StampedeProtectorStub($kvs, static::SLA);
     }
 }

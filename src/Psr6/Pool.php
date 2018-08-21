@@ -20,9 +20,9 @@ class Pool implements CacheItemPoolInterface
     const KEY_INVALID_CHARACTERS = '{}()/\@:';
 
     /**
-     * @var KeyValueStore
+     * @var KeyValueStoreInterface
      */
-    protected $store;
+    protected $kvs;
 
     /**
      * @var Repository
@@ -35,12 +35,12 @@ class Pool implements CacheItemPoolInterface
     protected $deferred = array();
 
     /**
-     * @param KeyValueStoreInterface $store KeyValueStoreInterface instance
+     * @param KeyValueStoreInterface $kvs KeyValueStoreInterface instance
      */
-    public function __construct(KeyValueStoreInterface $store)
+    public function __construct(KeyValueStoreInterface $kvs)
     {
-        $this->store = $store;
-        $this->repository = new Repository($store);
+        $this->kvs = $kvs;
+        $this->repository = new Repository($kvs);
     }
 
     /**
@@ -50,6 +50,70 @@ class Pool implements CacheItemPoolInterface
     {
         // make sure all deferred items are actually saved
         $this->commit();
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function clear()
+    {
+        $this->deferred = array();
+        return $this->kvs->clear();
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function commit()
+    {
+        $deferred = array();
+        foreach ($this->deferred as $item) {
+            if ($item->isExpired()) {
+                // already expired: don't even save it
+                continue;
+            }
+            // setMultiple doesn't allow to set expiration times on a per-item basis,
+            // so we'll have to group our requests per expiration date
+            $expire = $item->getExpiration();
+            $deferred[$expire][$item->getKey()] = $item->get();
+        }
+        // setMultiple doesn't allow to set expiration times on a per-item basis,
+        // so we'll have to group our requests per expiration date
+        $success = true;
+        foreach ($deferred as $expire => $items) {
+            $status = $this->kvs->setMultiple($items, $expire);
+            $success &= !\in_array(false, $status);
+            unset($deferred[$expire]);
+        }
+        return (bool) $success;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function deleteItem($key)
+    {
+        $this->assertValidKey($key);
+        $this->kvs->delete($key);
+        unset($this->deferred[$key]);
+        // as long as the item is gone from the cache (even if it never existed
+        // and delete failed because of that), we should return `true`
+        return true;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function deleteItems(array $keys)
+    {
+        foreach ($keys as $key) {
+            $this->assertValidKey($key);
+            unset($this->deferred[$key]);
+        }
+        $this->kvs->deleteMultiple($keys);
+        // as long as the item is gone from the cache (even if it never existed
+        // and delete failed because of that), we should return `true`
+        return true;
     }
 
     /**
@@ -109,43 +173,6 @@ class Pool implements CacheItemPoolInterface
     /**
      * {@inheritdoc}
      */
-    public function clear()
-    {
-        $this->deferred = array();
-        return $this->store->flush();
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function deleteItem($key)
-    {
-        $this->assertValidKey($key);
-        $this->store->delete($key);
-        unset($this->deferred[$key]);
-        // as long as the item is gone from the cache (even if it never existed
-        // and delete failed because of that), we should return `true`
-        return true;
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function deleteItems(array $keys)
-    {
-        foreach ($keys as $key) {
-            $this->assertValidKey($key);
-            unset($this->deferred[$key]);
-        }
-        $this->store->deleteMulti($keys);
-        // as long as the item is gone from the cache (even if it never existed
-        // and delete failed because of that), we should return `true`
-        return true;
-    }
-
-    /**
-     * {@inheritdoc}
-     */
     public function save(CacheItemInterface $item)
     {
         if (!$item instanceof Item) {
@@ -153,7 +180,6 @@ class Pool implements CacheItemPoolInterface
                 'bdk\SimpleCache\Psr6\Pool can only save bdk\SimpleCache\Psr6\Item objects'
             );
         }
-
         if (!$item->hasChanged()) {
             /*
                 If the item didn't change, we don't have to re-save it. We do,
@@ -165,7 +191,7 @@ class Pool implements CacheItemPoolInterface
             return $item->get() !== null;
         }
         $expire = $item->getExpiration();
-        return $this->store->set($item->getKey(), $item->get(), $expire);
+        return $this->kvs->set($item->getKey(), $item->get(), $expire);
     }
 
     /**
@@ -184,33 +210,6 @@ class Pool implements CacheItemPoolInterface
         // never reach cache...)
         $item->overrideIsHit(!$item->isExpired());
         return true;
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function commit()
-    {
-        $deferred = array();
-        foreach ($this->deferred as $item) {
-            if ($item->isExpired()) {
-                // already expired: don't even save it
-                continue;
-            }
-            // setMultiple doesn't allow to set expiration times on a per-item basis,
-            // so we'll have to group our requests per expiration date
-            $expire = $item->getExpiration();
-            $deferred[$expire][$item->getKey()] = $item->get();
-        }
-        // setMultiple doesn't allow to set expiration times on a per-item basis,
-        // so we'll have to group our requests per expiration date
-        $success = true;
-        foreach ($deferred as $expire => $items) {
-            $status = $this->store->setMultiple($items, $expire);
-            $success &= !\in_array(false, $status);
-            unset($deferred[$expire]);
-        }
-        return (bool) $success;
     }
 
     /**

@@ -73,7 +73,7 @@ abstract class Base implements KeyValueStoreInterface
     /**
      * {@inheritdoc}
      */
-    public function getSet($key, callable $getter, $expire = 0, $failDelay = 60)
+    public function getSet($key, callable $getter, $expire = 0, $failExtend = 60)
     {
         $return = $this->get($key);
         if ($this->lastGetInfo['code'] === 'hit') {
@@ -86,10 +86,10 @@ abstract class Base implements KeyValueStoreInterface
         }
         // getter callable failed... push out expiry and return expired value
         $expiry = $this->expiry($expire);
-        if ($this->lastGetInfo == 'expired' && $expiry && $failDelay) {
+        if ($this->lastGetInfo == 'expired' && $expiry && $failExtend) {
             $datetime = new DateTime();
             $datetime->setTimestamp($expiry);
-            $datetime->modify('+'.$failDelay.' seconds');
+            $datetime->modify('+'.$failExtend.' seconds');
             // failure may have taken longer than a success...
             // "reset" microtime such that cas will calc the last calctime
             $this->lastGetInfo['microtime'] = \microtime(true) - $this->lastGetInfo['calctime'] / 1000000;
@@ -237,7 +237,7 @@ abstract class Base implements KeyValueStoreInterface
     }
 
     /**
-     * Convert expiration to TTL
+     * Convert expiration to TTL (seconds)
      *
      * @param mixed $expire null: no expiration
      *                      integer: relative/absolute time in seconds

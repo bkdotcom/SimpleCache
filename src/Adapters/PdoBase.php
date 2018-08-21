@@ -323,7 +323,6 @@ abstract class PdoBase extends Base
     /**
      * {@inheritdoc}
      */
-    /*
     public function touch($key, $expire)
     {
         $expire = $this->expiry($expire);
@@ -339,7 +338,6 @@ abstract class PdoBase extends Base
         ));
         return $statement->rowCount() === 1;
     }
-    */
 
     /*
         Protected/internal

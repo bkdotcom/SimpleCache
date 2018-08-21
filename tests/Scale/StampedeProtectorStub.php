@@ -1,8 +1,8 @@
 <?php
 
-namespace MatthiasMullie\Scrapbook\Tests\Scale;
+namespace bdk\SimpleCache\Tests\Scale;
 
-use MatthiasMullie\Scrapbook\Scale\StampedeProtector;
+use bdk\SimpleCache\Scale\StampedeProtector;
 
 /**
  * The exact same as the real protector, but makes it possible to count the
@@ -14,7 +14,7 @@ class StampedeProtectorStub extends StampedeProtector
     /**
      * Amount of times sleep() was called.
      *
-     * @var int
+     * @var integer
      */
     public $count = 0;
 
@@ -24,7 +24,6 @@ class StampedeProtectorStub extends StampedeProtector
     protected function sleep()
     {
         ++$this->count;
-
         return parent::sleep();
     }
 }

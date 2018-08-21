@@ -1,11 +1,11 @@
 <?php
 
-namespace MatthiasMullie\Scrapbook\Tests\Scale;
+namespace bdk\SimpleCache\Tests\Scale;
 
-use MatthiasMullie\Scrapbook\Adapters\MemoryStore;
-use MatthiasMullie\Scrapbook\KeyValueStore;
-use MatthiasMullie\Scrapbook\Scale\Shard;
-use MatthiasMullie\Scrapbook\Tests\AdapterTestCase;
+use bdk\SimpleCache\Adapters\Memory;
+use bdk\SimpleCache\KeyValueStoreInterface;
+use bdk\SimpleCache\Scale\Shard;
+use bdk\SimpleCache\Tests\AdapterTestCase;
 
 class ShardSpreadTest extends AdapterTestCase
 {
@@ -19,10 +19,10 @@ class ShardSpreadTest extends AdapterTestCase
      */
     protected $other;
 
-    public function setAdapter(KeyValueStore $adapter)
+    public function setAdapter(KeyValueStoreInterface $adapter)
     {
         $this->cache = $adapter;
-        $this->other = new MemoryStore();
+        $this->other = new Memory();
 
         $this->shard = new Shard($this->cache, $this->other);
     }
@@ -37,13 +37,13 @@ class ShardSpreadTest extends AdapterTestCase
         $this->assertEquals('value2', $this->shard->get('key2'));
     }
 
-    public function testGetMulti()
+    public function testGetMultiple()
     {
         // make sure values are spread across the correct shards
         $this->other->set('key', 'value1'); // crc32('key') % 2 === 1
         $this->cache->set('key2', 'value2'); // crc32('key2') % 2 === 0
 
-        $this->assertEquals(array('key' => 'value1', 'key2' => 'value2'), $this->shard->getMulti(array('key', 'key2')));
+        $this->assertEquals(array('key' => 'value1', 'key2' => 'value2'), $this->shard->getMultiple(array('key', 'key2')));
     }
 
     public function testSet()
@@ -60,9 +60,9 @@ class ShardSpreadTest extends AdapterTestCase
         $this->assertEquals(false, $this->other->get('key2'));
     }
 
-    public function testSetMulti()
+    public function testSetMultiple()
     {
-        $result = $this->shard->setMulti(array('key' => 'value1', 'key2' => 'value2')); // crc32('key') % 2 === 1, crc32('key2') % 2 === 0
+        $result = $this->shard->setMultiple(array('key' => 'value1', 'key2' => 'value2')); // crc32('key') % 2 === 1, crc32('key2') % 2 === 0
 
         $this->assertEquals(array('key' => true, 'key2' => true), $result);
 
@@ -86,13 +86,13 @@ class ShardSpreadTest extends AdapterTestCase
         $this->assertEquals(false, $this->cache->get('key'));
     }
 
-    public function testDeleteMulti()
+    public function testDeleteMultiple()
     {
         // make sure values are spread across the correct shards
         $this->other->set('key', 'value1'); // crc32('key') % 2 === 1
         $this->cache->set('key2', 'value2'); // crc32('key2') % 2 === 0
 
-        $result = $this->shard->deleteMulti(array('key', 'key2'));
+        $result = $this->shard->deleteMultiple(array('key', 'key2'));
 
         $this->assertEquals(array('key' => true, 'key2' => true), $result);
 
@@ -121,6 +121,7 @@ class ShardSpreadTest extends AdapterTestCase
         $this->assertEquals('value2', $this->cache->get('key2'));
     }
 
+    /*
     public function testReplace()
     {
         // make sure values are spread across the correct shards
@@ -138,6 +139,7 @@ class ShardSpreadTest extends AdapterTestCase
         $this->assertEquals(false, $this->shard->get('key'));
         $this->assertEquals(false, $this->other->get('key'));
     }
+    */
 
     public function testCasViaGet()
     {
@@ -156,12 +158,12 @@ class ShardSpreadTest extends AdapterTestCase
         $this->assertEquals('changed-value2', $this->cache->get('key2'));
     }
 
-    public function testCasViaGetMulti()
+    public function testCasViaGetMultiple()
     {
         // make sure values are spread across the correct shards
         $this->cache->set('key2', 'value2'); // crc32('key2') % 2 === 0
 
-        $this->shard->getMulti(array('key2'), $tokens);
+        $this->shard->getMultiple(array('key2'), $tokens);
 
         $this->assertArrayHasKey('key2', $tokens);
         $this->assertNotNull($tokens['key2']);
@@ -236,7 +238,7 @@ class ShardSpreadTest extends AdapterTestCase
         $this->other->set('key', 'value1'); // crc32('key') % 2 === 1
         $this->cache->set('key2', 'value2'); // crc32('key2') % 2 === 0
 
-        $result = $this->shard->flush();
+        $result = $this->shard->clear();
 
         $this->assertEquals(true, $result);
 

@@ -239,7 +239,6 @@ class Flysystem extends Base
     /**
      * {@inheritdoc}
      */
-    /*
     public function touch($key, $expire)
     {
         if (!$this->lock($key)) {
@@ -262,7 +261,6 @@ class Flysystem extends Base
             return false;
         }
     }
-    */
 
     /*
         Protected/internal

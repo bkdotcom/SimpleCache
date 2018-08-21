@@ -1,29 +1,28 @@
 <?php
 
-namespace MatthiasMullie\Scrapbook\Tests\Buffered;
+namespace bdk\SimpleCache\Tests\Buffered;
 
-use MatthiasMullie\Scrapbook\Buffered\TransactionalStore;
-use MatthiasMullie\Scrapbook\Exception\UnbegunTransaction;
-use MatthiasMullie\Scrapbook\KeyValueStore;
-use MatthiasMullie\Scrapbook\Tests\AdapterTestCase;
+use bdk\SimpleCache\Buffered\Transactional;
+use bdk\SimpleCache\Exception\UnbegunTransaction;
+use bdk\SimpleCache\KeyValueStoreInterface;
+use bdk\SimpleCache\Tests\AdapterTestCase;
 
 class TransactionalOptimizationTest extends AdapterTestCase
 {
     /**
-     * @var TransactionalStore
+     * @var Transactional
      */
     protected $transactionalCache;
 
-    public function setAdapter(KeyValueStore $adapter)
+    public function setAdapter(KeyValueStoreInterface $adapter)
     {
         $this->cache = $adapter;
-        $this->transactionalCache = new TransactionalStore($adapter);
+        $this->transactionalCache = new Transactional($adapter);
     }
 
     public function setUp()
     {
         parent::setUp();
-
         $this->transactionalCache->begin();
     }
 
@@ -39,15 +38,15 @@ class TransactionalOptimizationTest extends AdapterTestCase
     }
 
     /**
-     * Confirm that multiple set() calls are combined into 1 setMulti().
+     * Confirm that multiple set() calls are combined into 1 setMultiple().
      */
     public function testOptimizedSet()
     {
-        $mock = $this->getMockBuilder('MatthiasMullie\\Scrapbook\\Adapters\\MemoryStore')
+        $mock = $this->getMockBuilder('bdk\\SimpleCache\\Adapters\\Memory')
             ->disableOriginalConstructor()
             ->getMock();
         $mock->expects($this->once())
-            ->method('setMulti')
+            ->method('setMultiple')
             ->will($this->returnCallback(function ($items, $expire) {
                 return array_fill_keys(array_keys($items), true);
             }));
@@ -55,7 +54,7 @@ class TransactionalOptimizationTest extends AdapterTestCase
             ->method('set')
             ->willReturn(true);
 
-        $transactionalCache = new TransactionalStore($mock);
+        $transactionalCache = new Transactional($mock);
         $transactionalCache->begin();
         $transactionalCache->set('key', 'value');
         $transactionalCache->set('key2', 'value');
@@ -64,15 +63,15 @@ class TransactionalOptimizationTest extends AdapterTestCase
 
     /**
      * Confirm that multiple set() calls with different expiration times
-     * are combined into multiple setMulti() calls.
+     * are combined into multiple setMultiple() calls.
      */
     public function testOptimizedSetMultipleExpiration()
     {
-        $mock = $this->getMockBuilder('MatthiasMullie\\Scrapbook\\Adapters\\MemoryStore')
+        $mock = $this->getMockBuilder('bdk\\SimpleCache\\Adapters\\Memory')
             ->disableOriginalConstructor()
             ->getMock();
         $mock->expects($this->exactly(2))
-            ->method('setMulti')
+            ->method('setMultiple')
             ->will($this->returnCallback(function ($items, $expire) {
                 return array_fill_keys(array_keys($items), true);
             }));
@@ -80,7 +79,7 @@ class TransactionalOptimizationTest extends AdapterTestCase
             ->method('set')
             ->willReturn(true);
 
-        $transactionalCache = new TransactionalStore($mock);
+        $transactionalCache = new Transactional($mock);
         $transactionalCache->begin();
         $transactionalCache->set('key', 'value', 5);
         $transactionalCache->set('key2', 'value', 5);

@@ -64,7 +64,7 @@ class AdapterStub implements KeyValueStoreInterface
         throw $this->exception;
     }
 
-    public function getSet($key, callable $getter, $expire = 0, $failDelay = 60)
+    public function getSet($key, callable $getter, $expire = 0, $failExtend = 60)
     {
         throw $this->exception;
     }
@@ -101,10 +101,8 @@ class AdapterStub implements KeyValueStoreInterface
         throw $this->exception;
     }
 
-    /*
     public function touch($key, $expire)
     {
         throw $this->exception;
     }
-    */
 }

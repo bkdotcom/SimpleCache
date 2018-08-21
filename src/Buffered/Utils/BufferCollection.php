@@ -1,6 +1,6 @@
 <?php
 
-namespace MatthiasMullie\Scrapbook\Buffered\Utils;
+namespace bdk\SimpleCache\Buffered\Utils;
 
 use bdk\SimpleCache\Adapters\Collections\Memory as MemoryCollection;
 
@@ -12,15 +12,17 @@ class BufferCollection extends MemoryCollection
     /**
      * @var Buffer
      */
-    protected $cache;
+    protected $kvs;
 
     /**
-     * @param Buffer $cache Buffer Instance
-     * @param string $name  Name of buffer
+     * Constructor
+     *
+     * @param Buffer $kvs  Buffer Instance
+     * @param string $name Name of buffer
      */
-    public function __construct(Buffer $cache, $name)
+    public function __construct(Buffer $kvs, $name)
     {
-        parent::__construct($cache, $name);
+        parent::__construct($kvs, $name);
     }
 
     /**
@@ -45,6 +47,6 @@ class BufferCollection extends MemoryCollection
         }
 
         // a known item, not returned by get, is expired
-        return \array_key_exists($key, $this->cache->items);
+        return \array_key_exists($key, $this->kvs->items);
     }
 }

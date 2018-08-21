@@ -10,9 +10,9 @@ class MySQLiProvider extends AdapterProvider
     public function __construct()
     {
         if (!class_exists('mysqli')) {
-            throw new Exception('misqli is not installed.');
+            throw new Exception('mysqli is not installed.');
         }
-        $client = new \mysqli('127.0.0.1', 'web', 'd5T*sk7YqbZP', 'cache');
+        $client = new \mysqli('127.0.0.1', 'root', '', 'cache');
         parent::__construct(new \bdk\SimpleCache\Adapters\MySQLi($client));
     }
 }

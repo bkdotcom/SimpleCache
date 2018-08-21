@@ -45,8 +45,9 @@ class AdapterTestProvider
     {
         $suite = new TestSuite('Test integration');
         $i = 0;
+        fwrite(STDOUT, '## '.get_class($this->testCase)."\n");
         foreach ($this->getAdapterProviders() as $name => $adapterProvider) {
-            fwrite(STDOUT, '## '.$name."\n");
+            fwrite(STDOUT, '  - '.$name."\n");
             $class = new ReflectionClass(get_class($this->testCase));
             $tests = new TestSuite($class);
 
@@ -63,7 +64,6 @@ class AdapterTestProvider
 
             ++$i;
         }
-
         return $suite;
     }
 
@@ -115,7 +115,6 @@ class AdapterTestProvider
             'default' => $tests,
             $group => $tests,
         ));
-
         foreach ($suite->tests() as $test) {
             /*
                 Testing for both current (namespace) and old (underscored)

@@ -265,38 +265,33 @@ class Redis extends Base
      *
      * @deprecated
      */
+    /*
     public function replace($key, $value, $expire = 0)
     {
         $ttl = $this->ttl($expire);
-        /*
-            Negative ttl behavior isn't properly documented & doesn't always
-            appear to treat the value as non-existing. Let's play safe and just
-            delete it right away!
-        */
+        // Negative ttl behavior isn't properly documented & doesn't always
+        // appear to treat the value as non-existing. Let's play safe and just
+        // delete it right away!
         if ($ttl < 0) {
             return $this->delete($key);
         }
-        /*
-            Redis supports passing set() an extended options array since >=2.6.12
-            which allows for an easy and 1-request way to replace a value.
-            That version already comes with Ubuntu 14.04. Ubuntu 12.04 (still
-            widely used and in LTS) comes with an older version, however, so I
-            want to support that too.
-            Supporting both versions comes at a cost.
-            I'll optimize for recent versions, which will get (in case of replace
-            failure) 1 additional network request (for version info). Older
-            versions will get 2 additional network requests: a failed replace
-            (because the options are unknown) & a version check.
-        */
+        // Redis supports passing set() an extended options array since >=2.6.12
+        // which allows for an easy and 1-request way to replace a value.
+        // That version already comes with Ubuntu 14.04. Ubuntu 12.04 (still
+        // widely used and in LTS) comes with an older version, however, so I
+        // want to support that too.
+        // Supporting both versions comes at a cost.
+        // I'll optimize for recent versions, which will get (in case of replace
+        // failure) 1 additional network request (for version info). Older
+        // versions will get 2 additional network requests: a failed replace
+        // (because the options are unknown) & a version check.
         if ($this->version === null || $this->supportsOptionsArray()) {
             $options = array('xx');
             if ($ttl > 0) {
-                /*
-                    Not adding 0 TTL to options:
-                    * HHVM (used to) interpret(s) wrongly & throw an exception
-                    * it's not needed anyway, for 0...
-                    @see https://github.com/facebook/hhvm/pull/4833
-                */
+                // Not adding 0 TTL to options:
+                // * HHVM (used to) interpret(s) wrongly & throw an exception
+                // * it's not needed anyway, for 0...
+                // @see https://github.com/facebook/hhvm/pull/4833
                 $options['ex'] = $ttl;
             }
             // either we support options array or we haven't yet checked, in
@@ -314,10 +309,8 @@ class Redis extends Base
         $this->client->watch($key);
         $exists = $this->client->exists('key');
         if (!$exists) {
-            /*
-                HHVM Redis only got unwatch recently
-                @see https://github.com/asgrim/hhvm/commit/bf5a259cece5df8a7617133c85043608d1ad5316
-            */
+            // HHVM Redis only got unwatch recently
+            // @see https://github.com/asgrim/hhvm/commit/bf5a259cece5df8a7617133c85043608d1ad5316
             if (\method_exists($this->client, 'unwatch')) {
                 $this->client->unwatch();
             } else {
@@ -334,10 +327,11 @@ class Redis extends Base
         } else {
             $this->client->set($key, $value);
         }
-        /** @var bool[] $return */
+        // @var bool[] $return
         $return = (array) $this->client->exec();
         return !\in_array(false, $return);
     }
+    */
 
     /**
      * {@inheritdoc}
@@ -361,7 +355,8 @@ class Redis extends Base
             'e' => $expiry,
             'ct' => null,
         );
-        return $this->client->set($key, $value, $this->ttlExtend($ttl));
+        $ret =  $this->client->set($key, $value, $this->ttlExtend($ttl));
+        return $ret;
     }
 
     /**
@@ -412,18 +407,15 @@ class Redis extends Base
     /**
      * {@inheritdoc}
      */
-    /*
     public function touch($key, $expire)
     {
         $ttl = $this->ttl($expire);
-
         if ($ttl < 0) {
             // Redis can't set expired, so just remove in that case ;)
             return (bool) $this->client->del($key);
         }
         return $this->client->expire($key, $ttl);
     }
-    */
 
     /*
         Protected/internal
@@ -524,6 +516,6 @@ class Redis extends Base
         if ($ttl > 0) {
             $ttl = $ttl + \min(60*60, \max(60, $ttl * 0.25));
         }
-        return $ttl;
+        return (int) $ttl;
     }
 }

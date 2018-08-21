@@ -10,7 +10,7 @@ use bdk\SimpleCache\KeyValueStoreInterface;
 class PrefixKeys implements KeyValueStoreInterface
 {
     /**
-     * @var KeyValueStore
+     * @var KeyValueStoreInterface
      */
     protected $kvs;
 
@@ -144,10 +144,10 @@ class PrefixKeys implements KeyValueStoreInterface
     /**
      * {@inheritdoc}
      */
-    public function getSet($key, callable $getter, $expire = 0, $failDelay = 60)
+    public function getSet($key, callable $getter, $expire = 0, $failExtend = 60)
     {
         $key = $this->prefix($key);
-        return $this->kvs->getSet($key, $getter, $expire, $failDelay);
+        return $this->kvs->getSet($key, $getter, $expire, $failExtend);
     }
 
     /**
@@ -194,13 +194,11 @@ class PrefixKeys implements KeyValueStoreInterface
     /**
      * {@inheritdoc}
      */
-    /*
     public function touch($key, $expire)
     {
         $key = $this->prefix($key);
         return $this->kvs->touch($key, $expire);
     }
-    */
 
     /**
      * add prefix to key

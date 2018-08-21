@@ -7,12 +7,12 @@ use PHPUnit\Framework\TestCase;
 /**
  * @group default
  */
-class NullTest extends TestCase
+class NullCacheTest extends TestCase
 {
 
 	public function __construct()
     {
-        $this->adapter = new \bdk\SimpleCache\Adapters\Null();
+        $this->adapter = new \bdk\SimpleCache\Adapters\NullCache();
     }
 
     public function testAdd()

@@ -9,7 +9,7 @@ namespace bdk\SimpleCache\Adapters;
  * @copyright Copyright (c) 2017, Brad Kent. All rights reserved
  * @license   LICENSE MIT
  */
-class Null extends Base
+class NullCache extends Base
 {
 
     /**
@@ -119,7 +119,6 @@ class Null extends Base
     /**
      * {@inheritdoc}
      */
-    /*
     public function touch($key, $expire)
     {
         if ($expire < 0 || ($expire > 2592000 && $expire < \time())) {
@@ -132,7 +131,6 @@ class Null extends Base
         }
         return !$result->error;
     }
-    */
 
     /**
      * {@inheritdoc}

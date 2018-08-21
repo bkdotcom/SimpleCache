@@ -18,9 +18,9 @@ use bdk\SimpleCache\KeyValueStoreInterface;
 class Repository
 {
     /**
-     * @var KeyValueStore
+     * @var KeyValueStoreInterface
      */
-    protected $store;
+    protected $kvs;
 
     /**
      * Array of resolved items.
@@ -37,11 +37,11 @@ class Repository
     protected $unresolved = array();
 
     /**
-     * @param KeyValueStoreInterface $store KeyValueStoreInterface instance
+     * @param KeyValueStoreInterface $kvs KeyValueStoreInterface instance
      */
-    public function __construct(KeyValueStore $store)
+    public function __construct(KeyValueStoreInterface $kvs)
     {
-        $this->store = $store;
+        $this->kvs = $kvs;
     }
 
     /**
@@ -49,6 +49,8 @@ class Repository
      *
      * @param string $unique
      * @param string $key
+     *
+     * @return void
      */
     public function add($unique, $key)
     {
@@ -93,12 +95,13 @@ class Repository
 
     /**
      * Resolve all unresolved keys at once.
+     *
+     * @return void
      */
     protected function resolve()
     {
         $keys = \array_unique(\array_values($this->unresolved));
-        $values = $this->store->getMulti($keys);
-
+        $values = $this->kvs->getMultiple($keys);
         foreach ($this->unresolved as $unique => $key) {
             if (!\array_key_exists($key, $values)) {
                 // key doesn't exist in cache

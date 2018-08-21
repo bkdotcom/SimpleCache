@@ -1,17 +1,17 @@
 <?php
 
-namespace MatthiasMullie\Scrapbook\Tests\Scale;
+namespace bdk\SimpleCache\Tests\Scale;
 
-use MatthiasMullie\Scrapbook\Adapters\MemoryStore;
-use MatthiasMullie\Scrapbook\KeyValueStore;
-use MatthiasMullie\Scrapbook\Scale\Shard;
-use MatthiasMullie\Scrapbook\Tests\AdapterTest;
+use bdk\SimpleCache\Adapters\Memory;
+use bdk\SimpleCache\KeyValueStoreInterface;
+use bdk\SimpleCache\Scale\Shard;
+use bdk\SimpleCache\Tests\AdapterTest;
 
 class ShardAdapterTest extends AdapterTest
 {
-    public function setAdapter(KeyValueStore $adapter)
+    public function setAdapter(KeyValueStoreInterface $adapter)
     {
-        $other = new MemoryStore();
+        $other = new Memory();
 
         $this->cache = new Shard($adapter, $other);
     }

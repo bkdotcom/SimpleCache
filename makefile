@@ -1,8 +1,14 @@
 # defaults for `make test`
 PHP ?= '7.2'
-ADAPTER ?= 'Apc,Couchbase,Flysystem,Memcached,MemoryStore,MySQL,PostgreSQL,Redis,SQLite'
+ADAPTER ?= 'Apc,Couchbase,Filesystem,Flysystem,Memcached,Memory,MySQLi,NullCache,PdoMySQL,PdoPgSQL,PdoSQLite,Redis'
 UP ?= 1
 DOWN ?= 1
+SERVICES = php
+SERVICES += $(if $(filter Couchbase,$(ADAPTER)),couchbase,)
+SERVICES += $(if $(filter Memcached,$(ADAPTER)),memcached,)
+SERVICES += $(if $(filter PdoMySQL,$(ADAPTER)),mysql,)
+SERVICES += $(if $(filter PdoPgSQL,$(ADAPTER)),postgresql,)
+SERVICES += $(if $(filter Redis,$(ADAPTER)),redis,)
 
 install:
 	wget -q -O - https://getcomposer.org/installer | php
@@ -21,10 +27,12 @@ docs:
 	rm apigen.phar
 
 up:
-	docker-compose -f docker-compose.yml -f tests/Docker/docker-compose.$(PHP).yml up --no-deps -d $(filter-out apc flysystem memorystore sqlite, $(shell echo $(ADAPTER) | tr "A-Z," "a-z ")) php
+	# Adapter: $(ADAPTER)
+	# Services: $(SERVICES)
+	docker-compose -f docker-compose.yml -f tests/Docker/docker-compose.$(PHP).yml up --no-deps -d $(SERVICES)
 
 down:
-	docker-compose -f docker-compose.yml -f tests/Docker/docker-compose.$(PHP).yml stop -t0 $(filter-out apc flysystem memorystore sqlite, $(shell echo $(ADAPTER) | tr "A-Z," "a-z ")) php
+	docker-compose -f docker-compose.yml -f tests/Docker/docker-compose.$(PHP).yml stop -t0 $(SERVICES)
 
 test:
 	# Usage:

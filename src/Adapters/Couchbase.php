@@ -321,7 +321,6 @@ class Couchbase extends Base
     /**
      * {@inheritdoc}
      */
-    /*
     public function touch($key, $expire)
     {
         if ($expire < 0 || ($expire > 2592000 && $expire < \time())) {
@@ -334,7 +333,6 @@ class Couchbase extends Base
         }
         return !$result->error;
     }
-    */
 
     /*
         Protected/internal

@@ -58,7 +58,7 @@ class PdoPgSQL extends PdoBase
             'CREATE TABLE IF NOT EXISTS '.$this->table.' (
                 k character varying NOT NULL PRIMARY KEY,
                 v text NOT NULL,
-                t character(32) NOT NULL
+                t character(32) NOT NULL,
                 e timestamp without time zone,
                 ct integer
             )'

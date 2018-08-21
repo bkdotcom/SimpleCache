@@ -185,7 +185,7 @@ class Memcached extends Base
                 if ($isExpired) {
                     $this->lastGetInfo['code'] = 'expired';
                     $this->lastGetInfo['expiredValue'] = $data['v'];
-                    return false;
+                    $return[$key] = false;
                 }
 
             }
@@ -299,7 +299,6 @@ class Memcached extends Base
      *
      * @see http://docs.hhvm.com/manual/en/memcached.touch.php
      */
-    /*
     public function touch($key, $expire)
     {
         if ($expire !== 0 && $expire < \time()) {
@@ -308,7 +307,6 @@ class Memcached extends Base
         $value = $this->get($key, $token);
         return $this->cas($token, $key, $value, $expire);
     }
-    */
 
     /*
         Protected/internal

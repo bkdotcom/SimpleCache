@@ -32,7 +32,7 @@ class AdapterTest extends AdapterTestCase
 
     public function testGetFail()
     {
-        $this->assertFalse($this->cache->get('test key'));
+        $this->assertFalse($this->cache->get('test key'), get_class($this->cache));
         $info = $this->cache->getInfo();
         $this->assertEquals('notExist', $info['code']);
     }

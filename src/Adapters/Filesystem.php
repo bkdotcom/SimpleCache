@@ -237,7 +237,6 @@ class Filesystem extends Base
     /**
      * {@inheritdoc}
      */
-    /*
     public function touch($key, $expire)
     {
         if (!$this->lock($key)) {
@@ -255,7 +254,6 @@ class Filesystem extends Base
         $success = \file_put_contents($path, $this->encode($value, $meta));
         return $success !== false && $this->unlock($key);
     }
-    */
 
     /*
         Protected/internal

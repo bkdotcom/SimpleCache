@@ -23,9 +23,9 @@ class AdapterTestCase extends TestCase implements AdapterProviderTestInterface
         return $provider->getSuite();
     }
 
-    public function setAdapter(KeyValueStoreInterface $adapter)
+    public function setAdapter(KeyValueStoreInterface $kvs)
     {
-        $this->cache = $adapter;
+        $this->cache = $kvs;
     }
 
     public function setCollectionName($name)

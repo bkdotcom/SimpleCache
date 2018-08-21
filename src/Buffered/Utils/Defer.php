@@ -11,7 +11,7 @@ use bdk\SimpleCache\KeyValueStoreInterface;
  *
  * Optimizations will be:
  * * multiple set() values (with the same expiration) will be applied in a
- *   single setMulti()
+ *   single setMultiple()
  * * for a set() followed by another set() on the same key, only the latter
  *   one will be applied
  * * same for an replace() followed by an increment(), or whatever operation
@@ -40,7 +40,7 @@ class Defer
      *
      * @var KeyValueStore
      */
-    protected $cache;
+    protected $kvs;
 
     /**
      * All updates will be scheduled by key. If there are multiple updates
@@ -67,11 +67,13 @@ class Defer
     protected $flush = false;
 
     /**
-     * @param KeyValueStore $cache
+     * Constructor
+     *
+     * @param KeyValueStoreInterface $kvs KeyValueStore instance
      */
-    public function __construct(KeyValueStore $cache)
+    public function __construct(KeyValueStoreInterface $kvs)
     {
-        $this->cache = $cache;
+        $this->kvs = $kvs;
     }
 
     /**
@@ -92,51 +94,6 @@ class Defer
      * @param mixed  $value
      * @param int    $expire
      */
-    public function set($key, $value, $expire)
-    {
-        $args = array(
-            'key' => $key,
-            'value' => $value,
-            'expire' => $expire,
-        );
-        $this->keys[$key] = array(__FUNCTION__, array($this->cache, __FUNCTION__), $args);
-    }
-
-    /**
-     * @param mixed[] $items
-     * @param int     $expire
-     */
-    public function setMulti(array $items, $expire)
-    {
-        foreach ($items as $key => $value) {
-            $this->set($key, $value, $expire);
-        }
-    }
-
-    /**
-     * @param string $key
-     */
-    public function delete($key)
-    {
-        $args = array('key' => $key);
-        $this->keys[$key] = array(__FUNCTION__, array($this->cache, __FUNCTION__), $args);
-    }
-
-    /**
-     * @param string[] $keys
-     */
-    public function deleteMulti(array $keys)
-    {
-        foreach ($keys as $key) {
-            $this->delete($key);
-        }
-    }
-
-    /**
-     * @param string $key
-     * @param mixed  $value
-     * @param int    $expire
-     */
     public function add($key, $value, $expire)
     {
         $args = array(
@@ -144,22 +101,7 @@ class Defer
             'value' => $value,
             'expire' => $expire,
         );
-        $this->keys[$key] = array(__FUNCTION__, array($this->cache, __FUNCTION__), $args);
-    }
-
-    /**
-     * @param string $key
-     * @param mixed  $value
-     * @param int    $expire
-     */
-    public function replace($key, $value, $expire)
-    {
-        $args = array(
-            'key' => $key,
-            'value' => $value,
-            'expire' => $expire,
-        );
-        $this->keys[$key] = array(__FUNCTION__, array($this->cache, __FUNCTION__), $args);
+        $this->keys[$key] = array(__FUNCTION__, array($this->kvs, __FUNCTION__), $args);
     }
 
     /**
@@ -192,21 +134,21 @@ class Defer
          * @param int $expire
          * @return bool
          */
-        $cache = $this->cache;
-        $callback = function ($originalValue, $key, $value, $expire) use ($cache) {
+        $kvs = $this->kvs;
+        $callback = function ($originalValue, $key, $value, $expire) use ($kvs) {
             // check if given (local) CAS token was known
             if ($originalValue === null) {
                 return false;
             }
 
-            // fetch data from real cache, getting new valid CAS token
-            $current = $cache->get($key, $token);
+            // fetch data from real kvs, getting new valid CAS token
+            $current = $kvs->get($key, $token);
 
             // check if the value we just read from real cache is still the same
             // as the one we saved when doing the original fetch
             if (\serialize($current) === $originalValue) {
                 // everything still checked out, CAS the value for real now
-                return $cache->cas($token, $key, $value, $expire);
+                return $kvs->cas($token, $key, $value, $expire);
             }
 
             return false;
@@ -222,6 +164,54 @@ class Defer
     }
 
     /**
+     * clear all scheduled updates, they'll be wiped out after this anyway
+     */
+    public function clear()
+    {
+        $this->keys = array();
+        $this->flush = true;
+    }
+
+    /**
+     * Clears all scheduled writes.
+     */
+    public function clearWrites()
+    {
+        $this->keys = array();
+        $this->flush = false;
+    }
+
+    /**
+     * @param string $key
+     * @param int    $offset
+     * @param int    $initial
+     * @param int    $expire
+     */
+    public function decrement($key, $offset, $initial, $expire)
+    {
+        $this->doIncrement(__FUNCTION__, $key, $offset, $initial, $expire);
+    }
+
+    /**
+     * @param string $key
+     */
+    public function delete($key)
+    {
+        $args = array('key' => $key);
+        $this->keys[$key] = array(__FUNCTION__, array($this->kvs, __FUNCTION__), $args);
+    }
+
+    /**
+     * @param string[] $keys
+     */
+    public function deleteMultiple(array $keys)
+    {
+        foreach ($keys as $key) {
+            $this->delete($key);
+        }
+    }
+
+    /**
      * @param string $key
      * @param int    $offset
      * @param int    $initial
@@ -234,13 +224,93 @@ class Defer
 
     /**
      * @param string $key
-     * @param int    $offset
-     * @param int    $initial
+     * @param mixed  $value
      * @param int    $expire
      */
-    public function decrement($key, $offset, $initial, $expire)
+    /*
+    public function replace($key, $value, $expire)
     {
-        $this->doIncrement(__FUNCTION__, $key, $offset, $initial, $expire);
+        $args = array(
+            'key' => $key,
+            'value' => $value,
+            'expire' => $expire,
+        );
+        $this->keys[$key] = array(__FUNCTION__, array($this->kvs, __FUNCTION__), $args);
+    }
+    */
+
+    /**
+     * @param string $key
+     * @param mixed  $value
+     * @param int    $expire
+     */
+    public function set($key, $value, $expire)
+    {
+        $args = array(
+            'key' => $key,
+            'value' => $value,
+            'expire' => $expire,
+        );
+        $this->keys[$key] = array(__FUNCTION__, array($this->kvs, __FUNCTION__), $args);
+    }
+
+    /**
+     * @param mixed[] $items
+     * @param int     $expire
+     */
+    public function setMultiple(array $items, $expire)
+    {
+        foreach ($items as $key => $value) {
+            $this->set($key, $value, $expire);
+        }
+    }
+
+    /**
+     * @param string $key
+     * @param int    $expire
+     */
+    public function touch($key, $expire)
+    {
+        if (isset($this->keys[$key]) && isset($this->keys[$key][2]['expire'])) {
+            // changing expiration time of a value we're already storing in
+            // this transaction - might as well just set new expiration time
+            // right away
+            $this->keys[$key][2]['expire'] = $expire;
+        } else {
+            $args = array(
+                'key' => $key,
+                'expire' => $expire,
+            );
+            $this->keys[$key] = array(__FUNCTION__, array($this->kvs, __FUNCTION__), $args);
+        }
+    }
+
+    /**
+     * Commit all deferred writes to cache.
+     *
+     * When the commit fails, no changes in this transaction will be applied
+     * (and those that had already been applied will be undone). False will
+     * be returned in that case.
+     *
+     * @return bool
+     */
+    public function commit()
+    {
+        list($old, $new) = $this->generateRollback();
+        $updates = $this->generateUpdates();
+        $updates = $this->combineUpdates($updates);
+        \usort($updates, array($this, 'sortUpdates'));
+        foreach ($updates as $update) {
+            // apply update to cache & receive a simple bool to indicate
+            // success (true) or failure (false)
+            $success = \call_user_func_array($update[1], $update[2]);
+            if ($success === false) {
+                $this->rollback($old, $new);
+                return false;
+            }
+        }
+        $this->clear();
+        return true;
     }
 
     /**
@@ -282,7 +352,7 @@ class Defer
                 // decrement or vice versa
                 $operation = $offset >= 0 ? 'increment' : 'decrement';
                 $this->keys[$key][0] = $operation;
-                $this->keys[$key][1] = array($this->cache, $operation);
+                $this->keys[$key][1] = array($this->kvs, $operation);
             } else {
                 // touch & delete become useless if incrementing/decrementing after
                 unset($this->keys[$key]);
@@ -296,76 +366,8 @@ class Defer
                 'initial' => $initial,
                 'expire' => $expire,
             );
-            $this->keys[$key] = array($operation, array($this->cache, $operation), $args);
+            $this->keys[$key] = array($operation, array($this->kvs, $operation), $args);
         }
-    }
-
-    /**
-     * @param string $key
-     * @param int    $expire
-     */
-    public function touch($key, $expire)
-    {
-        if (isset($this->keys[$key]) && isset($this->keys[$key][2]['expire'])) {
-            // changing expiration time of a value we're already storing in
-            // this transaction - might as well just set new expiration time
-            // right away
-            $this->keys[$key][2]['expire'] = $expire;
-        } else {
-            $args = array(
-                'key' => $key,
-                'expire' => $expire,
-            );
-            $this->keys[$key] = array(__FUNCTION__, array($this->cache, __FUNCTION__), $args);
-        }
-    }
-
-    public function flush()
-    {
-        // clear all scheduled updates, they'll be wiped out after this anyway
-        $this->keys = array();
-        $this->flush = true;
-    }
-
-    /**
-     * Clears all scheduled writes.
-     */
-    public function clear()
-    {
-        $this->keys = array();
-        $this->flush = false;
-    }
-
-    /**
-     * Commit all deferred writes to cache.
-     *
-     * When the commit fails, no changes in this transaction will be applied
-     * (and those that had already been applied will be undone). False will
-     * be returned in that case.
-     *
-     * @return bool
-     */
-    public function commit()
-    {
-        list($old, $new) = $this->generateRollback();
-        $updates = $this->generateUpdates();
-        $updates = $this->combineUpdates($updates);
-        \usort($updates, array($this, 'sortUpdates'));
-
-        foreach ($updates as $update) {
-            // apply update to cache & receive a simple bool to indicate
-            // success (true) or failure (false)
-            $success = \call_user_func_array($update[1], $update[2]);
-            if ($success === false) {
-                $this->rollback($old, $new);
-
-                return false;
-            }
-        }
-
-        $this->clear();
-
-        return true;
     }
 
     /**
@@ -378,7 +380,7 @@ class Defer
     protected function rollback(array $old, array $new)
     {
         foreach ($old as $key => $value) {
-            $current = $this->cache->get($key, $token);
+            $current = $this->kvs->get($key, $token);
 
             /*
              * If the value right now equals the one we planned to write, it
@@ -431,7 +433,7 @@ class Defer
         }
 
         // fetch the existing data & return the planned new data as well
-        $current = $this->cache->getMulti($keys);
+        $current = $this->kvs->getMultiple($keys);
 
         return array($current, $new);
     }
@@ -448,7 +450,7 @@ class Defer
         $updates = array();
 
         if ($this->flush) {
-            $updates[] = array('flush', array($this->cache, 'flush'), array());
+            $updates[] = array('flush', array($this->kvs, 'clear'), array());
         }
 
         foreach ($this->keys as $key => $data) {
@@ -460,7 +462,7 @@ class Defer
 
     /**
      * We may have multiple sets & deletes, which can be combined into a single
-     * setMulti or deleteMulti operation.
+     * setMultiple or deleteMultiple operation.
      *
      * @param array $updates
      *
@@ -494,7 +496,7 @@ class Defer
         }
 
         if (!empty($setMulti)) {
-            $cache = $this->cache;
+            $kvs = $this->kvs;
 
             /*
              * We'll use the return value of all deferred writes to check if they
@@ -505,8 +507,8 @@ class Defer
              * @param int $expire
              * @return bool
              */
-            $callback = function ($items, $expire) use ($cache) {
-                $success = $cache->setMulti($items, $expire);
+            $callback = function ($items, $expire) use ($kvs) {
+                $success = $kvs->setMultiple($items, $expire);
 
                 return !\in_array(false, $success);
             };
@@ -517,19 +519,19 @@ class Defer
         }
 
         if (!empty($deleteMulti)) {
-            $cache = $this->cache;
+            $kvs = $this->kvs;
 
             /*
              * commit() expected a single bool, not an array of success bools.
-             * Besides, deleteMulti() is never cause for failure here: if the
+             * Besides, deleteMultiple() is never cause for failure here: if the
              * key didn't exist because it has been deleted elsewhere already,
              * the data isn't corrupt, it's still as we'd expect it.
              *
              * @param string[] $keys
              * @return bool
              */
-            $callback = function ($keys) use ($cache) {
-                $cache->deleteMulti($keys);
+            $callback = function ($keys) use ($kvs) {
+                $kvs->deleteMultiple($keys);
 
                 return true;
             };
@@ -556,7 +558,7 @@ class Defer
             // there's no point in applying this after doing the below updates
             // we also shouldn't really worry about cas/replace failing after this,
             // there won't be any after cache having been flushed
-            'flush',
+            'clear',
 
             // prone to fail: they depend on certain conditions (token must match
             // or value must (not) exist)
