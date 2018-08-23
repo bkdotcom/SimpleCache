@@ -3,19 +3,13 @@
 	<testsuites>
 		<testsuite name="simplecache">
 			<directory suffix="Test.php">tests</directory>
-			<exclude>tests/Buffered</exclude>
-			<exclude>tests/Psr6</exclude>
-			<exclude>tests/Psr16</exclude>
-			<exclude>tests/Scale</exclude>
 			<exclude>tests/Psr6/Integration</exclude>
 			<exclude>tests/Psr16/Integration</exclude>
 		</testsuite>
 		<testsuite name="integration">
 			<!-- cache/integration-tests depends on cache/tag-interop, which has a 5.5 minimum requirement -->
-			<!--
 			<directory suffix="Test.php" phpVersion="5.5.0" phpVersionOperator="&gt;=">tests/Psr6/Integration</directory>
 			<directory suffix="Test.php" phpVersion="5.5.0" phpVersionOperator="&gt;=">tests/Psr16/Integration</directory>
-		-->
 		</testsuite>
 	</testsuites>
 	<filter>

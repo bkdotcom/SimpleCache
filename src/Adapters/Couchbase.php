@@ -3,6 +3,7 @@
 namespace bdk\SimpleCache\Adapters;
 
 use bdk\SimpleCache\Adapters\Collections\Couchbase as Collection;
+use bdk\SimpleCache\Exception\ServerUnhealthy;
 
 /**
  * Couchbase adapter. Basically just a wrapper over \CouchbaseBucket, but in an
@@ -21,21 +22,17 @@ class Couchbase extends Base
     /**
      * Constructor
      *
-     * @param \CouchbaseBucket $client Couchbase Client/Bucket
+     * @param \CouchbaseBucket $client              Couchbase Client/Bucket
+     * @param booleab          $assertServerHealthy (true) whether to check server health
      *
-     * @throws Exception Unhealthy server.
+     * @throws ServerUnhealthy if $assertServerHealthy & server not health
      */
-    public function __construct(\CouchbaseBucket $client)
+    public function __construct(\CouchbaseBucket $client, $assertServerHealthy = true)
     {
         $this->client = $client;
-        /*
-        $info = $this->client->manager()->info();
-        foreach ($info['nodes'] as $node) {
-            if ($node['status'] !== 'healthy') {
-                throw new Exception('Server isn\'t ready yet');
-            }
+        if ($assertServerHealthy) {
+            $this->assertServerHealthy();
         }
-        */
     }
 
     /**
@@ -371,4 +368,19 @@ class Couchbase extends Base
             : $unserialized;
     }
     */
+
+    /**
+     * Verify that the server is healthy.
+     *
+     * @throws ServerUnhealthy
+     */
+    protected function assertServerHealthy()
+    {
+        $info = $this->client->manager()->info();
+        foreach ($info['nodes'] as $node) {
+            if ($node['status'] !== 'healthy') {
+                throw new ServerUnhealthy('Server isn\'t ready yet');
+            }
+        }
+    }
 }

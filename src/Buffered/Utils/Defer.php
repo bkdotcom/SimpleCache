@@ -110,52 +110,46 @@ class Defer
      * @param mixed  $value
      * @param int    $expire
      */
-    public function cas($originalValue, $key, $value, $expire)
+    public function cas($token, $key, $value, $expire)
     {
         /*
-         * If we made it here, we're sure that logically, the CAS applies with
-         * respect to other operations in this transaction. That means we don't
-         * have to verify the token here: whatever has already been set/add/
-         * replace/cas will have taken care of that and we already know this one
-         * applies on top op that change. We can just fold it in there & update
-         * the value we set initially.
-         */
+            If we made it here, we're sure that logically, the CAS applies with
+            respect to other operations in this transaction. That means we don't
+            have to verify the token here: whatever has already been set/add/
+            replace/cas will have taken care of that and we already know this one
+            applies on top op that change. We can just fold it in there & update
+            the value we set initially.
+        */
         if (isset($this->keys[$key]) && \in_array($this->keys[$key][0], array('set', 'add', 'replace', 'cas'))) {
             $this->keys[$key][2]['value'] = $value;
             $this->keys[$key][2]['expire'] = $expire;
-
             return;
         }
-
         /*
-         * @param mixed $originalValue
-         * @param string $key
-         * @param mixed $value
-         * @param int $expire
-         * @return bool
-         */
+            @param mixed $token
+            @param string $key
+            @param mixed $value
+            @param int $expire
+            @return bool
+        */
         $kvs = $this->kvs;
-        $callback = function ($originalValue, $key, $value, $expire) use ($kvs) {
+        $callback = function ($token, $key, $value, $expire) use ($kvs) {
             // check if given (local) CAS token was known
-            if ($originalValue === null) {
+            if ($token === null) {
                 return false;
             }
-
             // fetch data from real kvs, getting new valid CAS token
-            $current = $kvs->get($key, $token);
-
+            $kvs->get($key, $tokenKvs);
             // check if the value we just read from real cache is still the same
             // as the one we saved when doing the original fetch
-            if (\serialize($current) === $originalValue) {
+            if ($tokenKvs === $token) {
                 // everything still checked out, CAS the value for real now
-                return $kvs->cas($token, $key, $value, $expire);
+                return $kvs->cas($tokenKvs, $key, $value, $expire);
             }
-
             return false;
         };
-
         $args = array(
-            'token' => $originalValue,
+            'token' => $token,
             'key' => $key,
             'value' => $value,
             'expire' => $expire,
@@ -179,6 +173,34 @@ class Defer
     {
         $this->keys = array();
         $this->flush = false;
+    }
+
+    /**
+     * Commit all deferred writes to cache.
+     *
+     * When the commit fails, no changes in this transaction will be applied
+     * (and those that had already been applied will be undone). False will
+     * be returned in that case.
+     *
+     * @return bool
+     */
+    public function commit()
+    {
+        list($old, $new) = $this->generateRollback();
+        $updates = $this->generateUpdates();
+        $updates = $this->combineUpdates($updates);
+        \usort($updates, array($this, 'sortUpdates'));
+        foreach ($updates as $update) {
+            // apply update to cache & receive a simple bool to indicate
+            // success (true) or failure (false)
+            $success = \call_user_func_array($update[1], $update[2]);
+            if ($success === false) {
+                $this->rollback($old, $new);
+                return false;
+            }
+        }
+        $this->clearWrites();
+        return true;
     }
 
     /**
@@ -286,181 +308,6 @@ class Defer
     }
 
     /**
-     * Commit all deferred writes to cache.
-     *
-     * When the commit fails, no changes in this transaction will be applied
-     * (and those that had already been applied will be undone). False will
-     * be returned in that case.
-     *
-     * @return bool
-     */
-    public function commit()
-    {
-        list($old, $new) = $this->generateRollback();
-        $updates = $this->generateUpdates();
-        $updates = $this->combineUpdates($updates);
-        \usort($updates, array($this, 'sortUpdates'));
-        foreach ($updates as $update) {
-            // apply update to cache & receive a simple bool to indicate
-            // success (true) or failure (false)
-            $success = \call_user_func_array($update[1], $update[2]);
-            if ($success === false) {
-                $this->rollback($old, $new);
-                return false;
-            }
-        }
-        $this->clear();
-        return true;
-    }
-
-    /**
-     * @param string $operation
-     * @param string $key
-     * @param int    $offset
-     * @param int    $initial
-     * @param int    $expire
-     */
-    protected function doIncrement($operation, $key, $offset, $initial, $expire)
-    {
-        if (isset($this->keys[$key])) {
-            if (\in_array($this->keys[$key][0], array('set', 'add', 'replace', 'cas'))) {
-                // we're trying to increment a key that's only just being stored
-                // in this transaction - might as well combine those
-                $symbol = $this->keys[$key][1] === 'increment' ? 1 : -1;
-                $this->keys[$key][2]['value'] += $symbol * $offset;
-                $this->keys[$key][2]['expire'] = $expire;
-            } elseif (\in_array($this->keys[$key][0], array('increment', 'decrement'))) {
-                // we're trying to increment a key that's already being incremented
-                // or decremented in this transaction - might as well combine those
-
-                // we may be combining an increment with a decrement
-                // we must carefully figure out how these 2 apply against each other
-                $symbol = $this->keys[$key][0] === 'increment' ? 1 : -1;
-                $previous = $symbol * $this->keys[$key][2]['offset'];
-
-                $symbol = $operation === 'increment' ? 1 : -1;
-                $current = $symbol * $offset;
-
-                $offset = $previous + $current;
-
-                $this->keys[$key][2]['offset'] = \abs($offset);
-                // initial value must also be adjusted to include the new offset
-                $this->keys[$key][2]['initial'] += $current;
-                $this->keys[$key][2]['expire'] = $expire;
-
-                // adjust operation - it might just have switched from increment to
-                // decrement or vice versa
-                $operation = $offset >= 0 ? 'increment' : 'decrement';
-                $this->keys[$key][0] = $operation;
-                $this->keys[$key][1] = array($this->kvs, $operation);
-            } else {
-                // touch & delete become useless if incrementing/decrementing after
-                unset($this->keys[$key]);
-            }
-        }
-
-        if (!isset($this->keys[$key])) {
-            $args = array(
-                'key' => $key,
-                'offset' => $offset,
-                'initial' => $initial,
-                'expire' => $expire,
-            );
-            $this->keys[$key] = array($operation, array($this->kvs, $operation), $args);
-        }
-    }
-
-    /**
-     * Roll the cache back to pre-transaction state by comparing the current
-     * cache values with what we planned to set them to.
-     *
-     * @param array $old
-     * @param array $new
-     */
-    protected function rollback(array $old, array $new)
-    {
-        foreach ($old as $key => $value) {
-            $current = $this->kvs->get($key, $token);
-
-            /*
-             * If the value right now equals the one we planned to write, it
-             * should be restored to what it was before. If it's yet something
-             * else, another process must've stored it and we should leave it
-             * alone.
-             */
-            if ($current === $new) {
-                /*
-                 * CAS the rollback. If it fails, that means another process
-                 * has stored in the meantime and we can just leave it alone.
-                 * Note that we can't know the original expiration time!
-                 */
-                $this->cas($token, $key, $value, 0);
-            }
-        }
-
-        $this->clear();
-    }
-
-    /**
-     * Since we can't perform true atomic transactions, we'll fake it.
-     * Most of the operations (set, touch, ...) can't fail. We'll do those last.
-     * We'll first schedule the operations that can fail (cas, replace, add)
-     * to minimize chances of another process overwriting those values in the
-     * meantime.
-     * But it could still happen, so we should fetch the current values for all
-     * unsafe operations. If the transaction fails, we can then restore them.
-     *
-     * @return array[] Array of 2 [key => value] maps: current & scheduled data
-     */
-    protected function generateRollback()
-    {
-        $keys = array();
-        $new = array();
-
-        foreach ($this->keys as $key => $data) {
-            $operation = $data[0];
-
-            // we only need values for cas & replace - recovering from an 'add'
-            // is just deleting the value...
-            if (\in_array($operation, array('cas', 'replace'))) {
-                $keys[] = $key;
-                $new[$key] = $data[2]['value'];
-            }
-        }
-
-        if (empty($keys)) {
-            return array(array(), array());
-        }
-
-        // fetch the existing data & return the planned new data as well
-        $current = $this->kvs->getMultiple($keys);
-
-        return array($current, $new);
-    }
-
-    /**
-     * By storing all updates by key, we've already made sure we don't perform
-     * redundant operations on a per-key basis. Now we'll turn those into
-     * actual updates.
-     *
-     * @return array
-     */
-    protected function generateUpdates()
-    {
-        $updates = array();
-
-        if ($this->flush) {
-            $updates[] = array('flush', array($this->kvs, 'clear'), array());
-        }
-
-        foreach ($this->keys as $key => $data) {
-            $updates[] = $data;
-        }
-
-        return $updates;
-    }
-
-    /**
      * We may have multiple sets & deletes, which can be combined into a single
      * setMultiple or deleteMultiple operation.
      *
@@ -522,24 +369,162 @@ class Defer
             $kvs = $this->kvs;
 
             /*
-             * commit() expected a single bool, not an array of success bools.
-             * Besides, deleteMultiple() is never cause for failure here: if the
-             * key didn't exist because it has been deleted elsewhere already,
-             * the data isn't corrupt, it's still as we'd expect it.
-             *
-             * @param string[] $keys
-             * @return bool
-             */
+                commit() expected a single bool, not an array of success bools.
+                Besides, deleteMultiple() is never cause for failure here: if the
+                key didn't exist because it has been deleted elsewhere already,
+                the data isn't corrupt, it's still as we'd expect it.
+
+                @param string[] $keys
+                @return bool
+            */
             $callback = function ($keys) use ($kvs) {
                 $kvs->deleteMultiple($keys);
 
                 return true;
             };
-
             $updates[] = array('deleteMulti', $callback, array($deleteMulti));
+        }
+        return $updates;
+    }
+
+    /**
+     * @param string $operation
+     * @param string $key
+     * @param int    $offset
+     * @param int    $initial
+     * @param int    $expire
+     */
+    protected function doIncrement($operation, $key, $offset, $initial, $expire)
+    {
+        if (isset($this->keys[$key])) {
+            if (\in_array($this->keys[$key][0], array('set', 'add', 'replace', 'cas'))) {
+                // we're trying to increment a key that's only just being stored
+                // in this transaction - might as well combine those
+                $symbol = $this->keys[$key][1] === 'increment' ? 1 : -1;
+                $this->keys[$key][2]['value'] += $symbol * $offset;
+                $this->keys[$key][2]['expire'] = $expire;
+            } elseif (\in_array($this->keys[$key][0], array('increment', 'decrement'))) {
+                // we're trying to increment a key that's already being incremented
+                // or decremented in this transaction - might as well combine those
+
+                // we may be combining an increment with a decrement
+                // we must carefully figure out how these 2 apply against each other
+                $symbol = $this->keys[$key][0] === 'increment' ? 1 : -1;
+                $previous = $symbol * $this->keys[$key][2]['offset'];
+
+                $symbol = $operation === 'increment' ? 1 : -1;
+                $current = $symbol * $offset;
+
+                $offset = $previous + $current;
+
+                $this->keys[$key][2]['offset'] = \abs($offset);
+                // initial value must also be adjusted to include the new offset
+                $this->keys[$key][2]['initial'] += $current;
+                $this->keys[$key][2]['expire'] = $expire;
+
+                // adjust operation - it might just have switched from increment to
+                // decrement or vice versa
+                $operation = $offset >= 0 ? 'increment' : 'decrement';
+                $this->keys[$key][0] = $operation;
+                $this->keys[$key][1] = array($this->kvs, $operation);
+            } else {
+                // touch & delete become useless if incrementing/decrementing after
+                unset($this->keys[$key]);
+            }
+        }
+
+        if (!isset($this->keys[$key])) {
+            $args = array(
+                'key' => $key,
+                'offset' => $offset,
+                'initial' => $initial,
+                'expire' => $expire,
+            );
+            $this->keys[$key] = array($operation, array($this->kvs, $operation), $args);
+        }
+    }
+
+    /**
+     * Since we can't perform true atomic transactions, we'll fake it.
+     * Most of the operations (set, touch, ...) can't fail. We'll do those last.
+     * We'll first schedule the operations that can fail (cas, replace, add)
+     * to minimize chances of another process overwriting those values in the
+     * meantime.
+     * But it could still happen, so we should fetch the current values for all
+     * unsafe operations. If the transaction fails, we can then restore them.
+     *
+     * @return array[] Array of 2 [key => value] maps: current & scheduled data
+     */
+    protected function generateRollback()
+    {
+        $keys = array();
+        $new = array();
+        foreach ($this->keys as $key => $data) {
+            $operation = $data[0];
+            // we only need values for cas & replace - recovering from an 'add'
+            // is just deleting the value...
+            if (\in_array($operation, array('cas', 'replace', 'set'))) {
+                $keys[] = $key;
+                $new[$key] = $data[2]['value'];
+            }
+        }
+        if (empty($keys)) {
+            return array(array(), array());
+        }
+        // fetch the existing data & return the planned new data as well
+        $current = $this->kvs->getMultiple($keys);
+        return array($current, $new);
+    }
+
+    /**
+     * By storing all updates by key, we've already made sure we don't perform
+     * redundant operations on a per-key basis. Now we'll turn those into
+     * actual updates.
+     *
+     * @return array
+     */
+    protected function generateUpdates()
+    {
+        $updates = array();
+
+        if ($this->flush) {
+            $updates[] = array('flush', array($this->kvs, 'clear'), array());
+        }
+
+        foreach ($this->keys as $key => $data) {
+            $updates[] = $data;
         }
 
         return $updates;
+    }
+
+    /**
+     * Roll the cache back to pre-transaction state by comparing the current
+     * cache values with what we planned to set them to.
+     *
+     * @param array $old
+     * @param array $new
+     */
+    protected function rollback(array $old, array $new)
+    {
+        foreach ($old as $key => $value) {
+            $current = $this->kvs->get($key, $token);
+            /*
+                If the value right now equals the one we planned to write, it
+                should be restored to what it was before. If it's yet something
+                else, another process must've stored it and we should leave it
+                alone.
+            */
+            if ($current === $new[$key]) {
+                /*
+                    CAS the rollback. If it fails, that means another process
+                    has stored in the meantime and we can just leave it alone.
+                */
+                $info = $this->kvs->getInfo();
+                $this->kvs->cas($token, $key, $value, $info['expiry']);
+            }
+        }
+        $this->clearWrites();
     }
 
     /**
@@ -573,11 +558,9 @@ class Defer
             'set', 'setMultiple',
             'delete', 'deleteMultiple',
         );
-
         if ($a[0] === $b[0]) {
             return 0;
         }
-
         return \array_search($a[0], $updateOrder) < \array_search($b[0], $updateOrder) ? -1 : 1;
     }
 }

@@ -26,6 +26,9 @@ class MySQLi extends Base
      */
     public function __construct(client $client, $table = 'cache')
     {
+        if ($client->connect_errno) {
+            throw new \Exception('MySQLi client not connected: ('.$client->connect_errno.') '.$client->connect_error);
+        }
         $this->client = $client;
         $this->table = $table;
         $this->init();
@@ -315,6 +318,28 @@ class MySQLi extends Base
         */
         $success = $affectedRows > 0;
         return \array_fill_keys(\array_keys($items), $success);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function touch($key, $expire)
+    {
+        $expire = $this->expiry($expire);
+        $this->clearExpired();
+        $stmt = $this->client->prepare(
+            'UPDATE '.$this->table.'
+            SET e = ?
+            WHERE k = ?'
+        );
+        $stmt->bind_param(
+            'ss',
+            $expire,
+            $key
+        );
+        $stmt->execute();
+        $affectedRows = $stmt->affected_rows;
+        return $affectedRows === 1;
     }
 
     /**

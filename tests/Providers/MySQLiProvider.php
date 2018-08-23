@@ -12,7 +12,7 @@ class MySQLiProvider extends AdapterProvider
         if (!class_exists('mysqli')) {
             throw new Exception('mysqli is not installed.');
         }
-        $client = new \mysqli('127.0.0.1', 'root', '', 'cache');
+        $client = new \mysqli('mysql', 'root', '', 'cache');
         parent::__construct(new \bdk\SimpleCache\Adapters\MySQLi($client));
     }
 }

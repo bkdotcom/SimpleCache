@@ -252,8 +252,11 @@ class SimpleCache implements CacheInterface
             $datetime->add($ttl);
             return (int) $datetime->format('U');
         }
-        throw new InvalidArgumentException(
-            'Invalid TTL: '.\serialize($ttl).'. Must be integer or instance of DateInterval.'
-        );
+        $error = 'Invalid TTL: '.\serialize($ttl).'. Must be integer or instance of DateInterval.';
+        if (class_exists('\TypeError')) {
+            throw new \TypeError($error);
+        } else {
+            throw new InvalidArgumentException($error);
+        }
     }
 }

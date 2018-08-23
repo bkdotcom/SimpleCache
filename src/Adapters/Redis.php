@@ -3,6 +3,7 @@
 namespace bdk\SimpleCache\Adapters;
 
 use bdk\SimpleCache\Adapters\Collections\Redis as Collection;
+use bdk\SimpleCache\Exception\InvalidCollection;
 use bdk\SimpleCache\KeyValueStoreInterface;
 
 /**

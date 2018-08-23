@@ -196,7 +196,7 @@ class Filesystem extends Base
         }
         $path = $this->path($key);
         $meta = array(
-            'expire' => $expire,
+            'e' => $expire,
         );
         $success = \file_put_contents($path, $this->encode($value, $meta)) !== false;
         return $success && $this->unlock($key);
@@ -249,7 +249,7 @@ class Filesystem extends Base
         }
         $path = $this->path($key);
         $meta = array(
-            'expire' => $expire,
+            'e' => $expire,
         );
         $success = \file_put_contents($path, $this->encode($value, $meta));
         return $success !== false && $this->unlock($key);
@@ -257,41 +257,6 @@ class Filesystem extends Base
 
     /*
         Protected/internal
-    */
-
-    /**
-     * decode value & metadata
-     *
-     * @param string $data meta + data string
-     *
-     * @return array
-     */
-    /*
-    protected function decode($data)
-    {
-        $data = \explode("\x1D", $data, 2); // \x1D = "Group Separator
-        // $data[0] is meta, $data[1] is value (serialized)
-        return \array_merge(\unserialize($data[0]), array(
-            'token' => \md5($data[1]),
-            'value' => \unserialize($data[1]),
-        ));
-    }
-    */
-
-    /**
-     * Build value, token & expiration time to be stored in cache file.
-     *
-     * @param string $value value to store
-     * @param array  $meta  meta information including expire
-     *
-     * @return string
-     */
-    /*
-    protected function encode($value, $meta = array())
-    {
-        $meta['expire'] = $this->expiry($meta['expire']);
-        return \serialize($meta)."\x1D".\serialize($value);  // \x1D = "Group Separator
-    }
     */
 
     /**

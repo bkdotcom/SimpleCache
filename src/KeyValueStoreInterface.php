@@ -185,7 +185,7 @@ interface KeyValueStoreInterface
      *    which will be stored with $expire expiry
      *
      * There are conditions where value may be expired, yet getter will not be called
-     * In expired value will be returned
+     * If so, expired value will be returned
      * * stampeed protection:  another process is refreshing the cache
      * * getter recently failed and failExtend time has not ellapsed
      *

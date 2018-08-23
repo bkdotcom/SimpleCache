@@ -135,24 +135,23 @@ class Memory extends Base
         if (!isset($this->items[$key])) {
             return false;
         }
-        $data = $this->items[$key];
+        $item = $this->items[$key];
         $rand = \mt_rand() / \mt_getrandmax();    // random float between 0 and 1 inclusive
-        $isExpired = $data['e'] && $data['e'] < \microtime(true) - $data['ct']/1000000 * \log($rand);
+        $isExpired = $item['e'] && $item['e'] < \microtime(true) - $item['ct']/1000000 * \log($rand);
         $this->lastGetInfo = \array_merge($this->lastGetInfo, array(
-            'calcTime' => $data['ct'],
+            'calcTime' => $item['ct'],
             'code' => 'hit',
-            'expiry' => $data['e'],
+            'expiry' => $item['e'],
             // 'expiryOriginal' => $data['eo'],
-            'token' => \md5($data['v']),
+            'token' => \md5($item['v']),
         ));
         if ($isExpired) {
             $this->lastGetInfo['code'] = 'expired';
-            $this->lastGetInfo['expiredValue'] = \unserialize($data['v']);
+            $this->lastGetInfo['expiredValue'] = \unserialize($item['v']);
             return false;
         }
         $token = $this->lastGetInfo['token'];
-        return \unserialize($data['v']);
-
+        return \unserialize($item['v']);
     }
 
     /**
@@ -168,17 +167,17 @@ class Memory extends Base
      */
     public function getMultiple(array $keys, array &$tokens = null)
     {
-        $items = array();
+        $values = array();
         $tokens = array();
         foreach ($keys as $key) {
             if (!$this->exists($key)) {
                 // omit missing keys from return array
                 continue;
             }
-            $items[$key] = $this->get($key, $token);
+            $values[$key] = $this->get($key, $token);
             $tokens[$key] = $token;
         }
-        return $items;
+        return $values;
     }
 
     /**
@@ -200,11 +199,6 @@ class Memory extends Base
     public function set($key, $value, $expire = 0)
     {
         $expire = $this->expiry($expire);
-        if ($expire !== 0 && $expire < \time()) {
-            // setting an expired value??
-            // just delete it now and be done with it
-            return !isset($this->items[$key]) || $this->delete($key);
-        }
         $this->size -= isset($this->items[$key])
             ? \strlen($this->items[$key]['v'])
             : 0;
@@ -247,30 +241,6 @@ class Memory extends Base
     */
 
     /**
-     * Checks if a value exists in cache and is not yet expired.
-     *
-     * @param string $key key to check
-     *
-     * @return boolean
-     */
-    protected function exists($key)
-    {
-        if (!\array_key_exists($key, $this->items)) {
-            // key not in cache
-            return false;
-        }
-        $expire = $this->items[$key]['e'];
-        if ($expire !== 0 && $expire < \time()) {
-            // not permanent & expired
-            $this->size -= \strlen($this->items[$key]['v']);
-            unset($this->items[$key]);
-            return false;
-        }
-        $this->lru($key);
-        return true;
-    }
-
-    /**
      * Shared between increment/decrement: both have mostly the same logic
      * (decrement just increments a negative value), but need their validation
      * split up (increment won't accept negative values).
@@ -308,6 +278,30 @@ class Memory extends Base
             $item = \array_shift($this->items);
             $this->size -= \strlen($item['v']);
         }
+    }
+
+    /**
+     * Checks if a value exists in cache and is not yet expired.
+     *
+     * @param string $key key to check
+     *
+     * @return boolean
+     */
+    protected function exists($key)
+    {
+        if (!\array_key_exists($key, $this->items)) {
+            // key not in cache
+            return false;
+        }
+        $expire = $this->items[$key]['e'];
+        if ($expire !== 0 && $expire < \time()) {
+            // not permanent & expired
+            $this->size -= \strlen($this->items[$key]['v']);
+            unset($this->items[$key]);
+            return false;
+        }
+        $this->lru($key);
+        return true;
     }
 
     /**

@@ -6,6 +6,7 @@ DOWN ?= 1
 SERVICES = php
 SERVICES += $(if $(filter Couchbase,$(ADAPTER)),couchbase,)
 SERVICES += $(if $(filter Memcached,$(ADAPTER)),memcached,)
+SERVICES += $(if $(filter MySQLi,$(ADAPTER)),mysql,)
 SERVICES += $(if $(filter PdoMySQL,$(ADAPTER)),mysql,)
 SERVICES += $(if $(filter PdoPgSQL,$(ADAPTER)),postgresql,)
 SERVICES += $(if $(filter Redis,$(ADAPTER)),redis,)

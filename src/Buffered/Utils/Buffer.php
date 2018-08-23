@@ -30,10 +30,8 @@ class Buffer extends Memory
     public $items = array();
 
     /**
-     * Checks if a value exists in cache and is not yet expired.
-     * Contrary to default Memory, expired items must *not* be deleted
-     * from memory: we need to remember that they were expired, so we don't
-     * reach out to real cache (only to get nothing, since it's expired...).
+     * Overrides Memory::exists
+     * Doesn't delete from cache if expired
      *
      * @param string $key key to check
      *
@@ -45,9 +43,9 @@ class Buffer extends Memory
             // key not in cache
             return false;
         }
-        $expire = $this->items[$key][1];
+        $expire = $this->items[$key]['e'];
         if ($expire !== 0 && $expire < \time()) {
-            // not permanent & already expired
+            // expired
             return false;
         }
         $this->lru($key);
@@ -74,7 +72,6 @@ class Buffer extends Memory
             // returned a value, clearly not yet expired
             return false;
         }
-        // a known item, not returned by get, is expired
         return \array_key_exists($key, $this->items);
     }
 

@@ -17,14 +17,12 @@ class TransactionalAdapterTest extends AdapterTest
     public function setUp()
     {
         parent::setUp();
-
         $this->cache->begin();
     }
 
     public function tearDown()
     {
         parent::tearDown();
-
         try {
             $this->cache->rollback();
         } catch (UnbegunTransaction $e) {

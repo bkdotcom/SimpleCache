@@ -172,7 +172,13 @@ class Buffered implements KeyValueStoreInterface
      */
     public function getSet($key, callable $getter, $expire = 0, $failExtend = 60)
     {
-
+        $value = $this->transaction->getSet($key, $getter, $expire, $failExtend);
+        // only store if we managed to retrieve a value (valid token) and it's
+        // not already in cache (or we may mess up tokens)
+        if ($value !== false && $this->local->get($key, $localToken) === false && $localToken === null) {
+            $this->local->set($key, $value);
+        }
+        return $value;
     }
 
     /**

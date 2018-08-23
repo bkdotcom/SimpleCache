@@ -9,8 +9,9 @@ use bdk\SimpleCache\Adapters\Collections\Memory as BufferCollection;
  * This is a helper class for Buffered & Transactional wrappers, which buffer
  * real cache requests in memory.
  *
- * This class accepts 2 caches: a Buffer instance (to read data from as long
- * as it hasn't been committed) and a KeyValueStore object (the real cache)
+ * This class accepts 2 caches:
+ *   a Buffer instance (to read data from as long as it hasn't been committed)
+ *   and a KeyValueStore object (the real cache)
  *
  * Every write action will first store the data in the Buffer instance, and
  * then pass update along to $defer.
@@ -63,10 +64,17 @@ class Transaction implements KeyValueStoreInterface
     protected $collections = array();
 
     /**
+     * Keep track of keys we're deleting
+     *
+     * @var array
+     */
+    protected $deletedKeys = array();
+
+    /**
      * Constructor
      *
      * @param Buffer|BufferCollection $buffer Buffer Instance
-     * @param KeyValueStoreInterface  $kvs    Real Cache
+     * @param KeyValueStoreInterface  $kvs    Real KeyValueStore
      */
     public function __construct(/* Buffer|BufferCollection */ $buffer, KeyValueStoreInterface $kvs)
     {
@@ -131,9 +139,12 @@ class Transaction implements KeyValueStoreInterface
      */
     public function cas($token, $key, $value, $expire = 0)
     {
-        $originalValue = isset($this->tokens[$token]) ? $this->tokens[$token] : null;
-        // value is no longer the same as what we used for token
-        if (\serialize($this->get($key)) !== $originalValue) {
+        $tokenOriginal = isset($this->tokens[$token])
+            ? $this->tokens[$token]
+            : null;
+        $tokenValCur = \md5(\serialize($this->get($key)));
+        if ($tokenValCur !== $tokenOriginal) {
+            // value is no longer the same as what we used for token
             return false;
         }
         // "CAS" value to local cache/memory
@@ -143,7 +154,7 @@ class Transaction implements KeyValueStoreInterface
         }
         // only schedule the CAS to be performed on real cache if it was OK on
         // local cache
-        $this->defer->cas($originalValue, $key, $value, $expire);
+        $this->defer->cas($tokenOriginal, $key, $value, $expire);
         return true;
     }
 
@@ -187,7 +198,7 @@ class Transaction implements KeyValueStoreInterface
         }
         // store the value in memory, so that when we ask for it again later
         // in this same request, we get the value we just set
-        $value = \max(0, $value - $offset);
+        $value = $value - $offset;
         $success = $this->buffer->set($key, $value, $expire);
         if ($success === false) {
             return false;
@@ -209,11 +220,10 @@ class Transaction implements KeyValueStoreInterface
         }
         /*
             To make sure that subsequent get() calls for this key don't return
-            a value (it's supposed to be deleted), we'll make it expired in our
-            temporary bag (as opposed to deleting it from out bag, in which case
-            we'd fall back to fetching it from real store, where the transaction
-            might not yet be committed)
+            a value (it's supposed to be deleted), we'll make it expired in
+            our buffer cache.
         */
+        $this->deletedKeys[] = $key;
         $this->buffer->set($key, $value, -1);
         $this->defer->delete($key);
         return true;
@@ -264,7 +274,7 @@ class Transaction implements KeyValueStoreInterface
                 return false;
             }
             // unknown in local cache = fetch from source cache
-            $value = $this->kvs->get($key, $token);
+            $value = $this->kvs->get($key);
         }
         // no value = quit early, don't generate a useless token
         if ($value === false) {
@@ -279,7 +289,7 @@ class Transaction implements KeyValueStoreInterface
             one particular request - which it is.
         */
         $token = \uniqid();
-        $this->tokens[$token] = \serialize($value);
+        $this->tokens[$token] = \md5(\serialize($value));
         return $value;
     }
 
@@ -302,7 +312,16 @@ class Transaction implements KeyValueStoreInterface
      */
     public function getInfo()
     {
-        return $this->buffer->getInfo();
+        $info = $this->buffer->getInfo();
+        if (\in_array($info['key'], $this->deletedKeys)) {
+            $info = \array_merge($info, array(
+                'code' => 'notExist',
+                'expiredValue' => null,
+                'expiry' => null,
+                'token' => null,
+            ));
+        }
+        return $info;
     }
 
     /**
@@ -323,7 +342,6 @@ class Transaction implements KeyValueStoreInterface
                     unset($keys[$i]);
                 }
             }
-
             // fetch missing values from real cache
             if ($keys) {
                 $missing = $this->kvs->getMultiple($keys);
@@ -335,7 +353,7 @@ class Transaction implements KeyValueStoreInterface
         foreach ($values as $key => $value) {
             $token = \uniqid();
             $tokens[$key] = $token;
-            $this->tokens[$token] = \serialize($value);
+            $this->tokens[$token] = \md5(\serialize($value));
         }
         return $values;
     }
@@ -345,7 +363,10 @@ class Transaction implements KeyValueStoreInterface
      */
     public function getSet($key, callable $getter, $expire = 0, $failExtend = 60)
     {
-
+        $value = $this->buffer->getSet($key, $getter, $expire, $failExtend);
+        // @todo.. only call set if necessary
+        $this->defer->set($key, $value, $expire);
+        return $value;
     }
 
     /**
@@ -368,7 +389,7 @@ class Transaction implements KeyValueStoreInterface
         }
         // store the value in memory, so that when we ask for it again later
         // in this same request, we get the value we just set
-        $value = \max(0, $value + $offset);
+        $value = $value + $offset;
         $success = $this->buffer->set($key, $value, $expire);
         if ($success === false) {
             return false;

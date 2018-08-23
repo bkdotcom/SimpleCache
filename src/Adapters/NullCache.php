@@ -121,15 +121,7 @@ class NullCache extends Base
      */
     public function touch($key, $expire)
     {
-        if ($expire < 0 || ($expire > 2592000 && $expire < \time())) {
-            return $this->delete($key);
-        }
-        try {
-            $result = $this->client->getAndTouch($key, $expire);
-        } catch (\CouchbaseException $e) {
-            return false;
-        }
-        return !$result->error;
+        return true;
     }
 
     /**

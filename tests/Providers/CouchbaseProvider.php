@@ -44,10 +44,8 @@ class CouchbaseProvider extends AdapterProvider
             if ($healthy) {
                 return true;
             }
-
             sleep(1);
         }
-
         return false;
     }
 }

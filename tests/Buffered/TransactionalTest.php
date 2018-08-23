@@ -390,20 +390,19 @@ class TransactionalTest extends AdapterTestCase
         $this->assertEquals(0, $this->transactionalCache->get('key'));
         $this->assertEquals(0, $this->cache->get('key'));
 
-        // decrement again (can't go below 0)
+        // decrement again (CAN go below 0)
         $this->transactionalCache->begin();
         $this->transactionalCache->decrement('key', 1, 1);
 
         // check that the value has been decremented on transactionalCache (only)
-        $this->assertEquals(0, $this->transactionalCache->get('key'));
+        $this->assertEquals(-1, $this->transactionalCache->get('key'));
         $this->assertEquals(0, $this->cache->get('key'));
 
+        // commit and check that the value has also been decremented on real cache
         $success = $this->transactionalCache->commit();
         $this->assertTrue($success);
-
-        // check that the value has also been decremented on real cache
-        $this->assertEquals(0, $this->transactionalCache->get('key'));
-        $this->assertEquals(0, $this->cache->get('key'));
+        $this->assertEquals(-1, $this->transactionalCache->get('key'));
+        $this->assertEquals(-1, $this->cache->get('key'));
     }
 
     public function testDecrementInitialize()
@@ -421,20 +420,19 @@ class TransactionalTest extends AdapterTestCase
         $this->assertEquals(0, $this->transactionalCache->get('key'));
         $this->assertEquals(0, $this->cache->get('key'));
 
-        // decrement again (can't go below 0)
+        // decrement again (CAN go below 0)
         $this->transactionalCache->begin();
         $this->transactionalCache->decrement('key', 1, 0);
 
         // check that the value has been decremented on transactionalCache (only)
-        $this->assertEquals(0, $this->transactionalCache->get('key'));
+        $this->assertEquals(-1, $this->transactionalCache->get('key'));
         $this->assertEquals(0, $this->cache->get('key'));
 
+        // commit and check that the value has also been decremented on real cache
         $success = $this->transactionalCache->commit();
         $this->assertTrue($success);
-
-        // check that the value has also been decremented on real cache
-        $this->assertEquals(0, $this->transactionalCache->get('key'));
-        $this->assertEquals(0, $this->cache->get('key'));
+        $this->assertEquals(-1, $this->transactionalCache->get('key'));
+        $this->assertEquals(-1, $this->cache->get('key'));
     }
 
     public function testTouch()

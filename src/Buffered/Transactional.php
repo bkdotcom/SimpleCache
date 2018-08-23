@@ -58,8 +58,8 @@ class Transactional implements KeyValueStoreInterface
      */
     public function add($key, $value, $expire = 0)
     {
-        $cache = \end($this->transactions);
-        return $cache->add($key, $value, $expire);
+        $kvs = \end($this->transactions);
+        return $kvs->add($key, $value, $expire);
     }
 
     /**
@@ -67,8 +67,8 @@ class Transactional implements KeyValueStoreInterface
      */
     public function cas($token, $key, $value, $expire = 0)
     {
-        $cache = \end($this->transactions);
-        return $cache->cas($token, $key, $value, $expire);
+        $kvs = \end($this->transactions);
+        return $kvs->cas($token, $key, $value, $expire);
     }
 
     /**
@@ -76,8 +76,8 @@ class Transactional implements KeyValueStoreInterface
      */
     public function clear()
     {
-        $cache = \end($this->transactions);
-        return $cache->clear();
+        $kvs = \end($this->transactions);
+        return $kvs->clear();
     }
 
     /**
@@ -85,8 +85,8 @@ class Transactional implements KeyValueStoreInterface
      */
     public function decrement($key, $offset = 1, $initial = 0, $expire = 0)
     {
-        $cache = \end($this->transactions);
-        return $cache->decrement($key, $offset, $initial, $expire);
+        $kvs = \end($this->transactions);
+        return $kvs->decrement($key, $offset, $initial, $expire);
     }
 
     /**
@@ -94,8 +94,8 @@ class Transactional implements KeyValueStoreInterface
      */
     public function delete($key)
     {
-        $cache = \end($this->transactions);
-        return $cache->delete($key);
+        $kvs = \end($this->transactions);
+        return $kvs->delete($key);
     }
 
     /**
@@ -103,8 +103,8 @@ class Transactional implements KeyValueStoreInterface
      */
     public function deleteMultiple(array $keys)
     {
-        $cache = \end($this->transactions);
-        return $cache->deleteMultiple($keys);
+        $kvs = \end($this->transactions);
+        return $kvs->deleteMultiple($keys);
     }
 
     /**
@@ -112,8 +112,8 @@ class Transactional implements KeyValueStoreInterface
      */
     public function get($key, &$token = null)
     {
-        $cache = \end($this->transactions);
-        return $cache->get($key, $token);
+        $kvs = \end($this->transactions);
+        return $kvs->get($key, $token);
     }
 
     /**
@@ -121,8 +121,8 @@ class Transactional implements KeyValueStoreInterface
      */
     public function getCollection($name)
     {
-        $cache = \end($this->transactions);
-        return new static($cache->getCollection($name));
+        $kvs = \end($this->transactions);
+        return new static($kvs->getCollection($name));
     }
 
     /**
@@ -130,8 +130,8 @@ class Transactional implements KeyValueStoreInterface
      */
     public function getInfo()
     {
-        $cache = \end($this->transactions);
-        return $cache->getInfo();
+        $kvs = \end($this->transactions);
+        return $kvs->getInfo();
     }
 
     /**
@@ -139,8 +139,8 @@ class Transactional implements KeyValueStoreInterface
      */
     public function getMultiple(array $keys, array &$tokens = null)
     {
-        $cache = \end($this->transactions);
-        return $cache->getMultiple($keys, $tokens);
+        $kvs = \end($this->transactions);
+        return $kvs->getMultiple($keys, $tokens);
     }
 
     /**
@@ -148,7 +148,8 @@ class Transactional implements KeyValueStoreInterface
      */
     public function getSet($key, callable $getter, $expire = 0, $failExtend = 60)
     {
-
+        $kvs = \end($this->transactions);
+        return $kvs->getSet($key, $getter, $expire, $failExtend);
     }
 
     /**
@@ -156,8 +157,8 @@ class Transactional implements KeyValueStoreInterface
      */
     public function increment($key, $offset = 1, $initial = 0, $expire = 0)
     {
-        $cache = \end($this->transactions);
-        return $cache->increment($key, $offset, $initial, $expire);
+        $kvs = \end($this->transactions);
+        return $kvs->increment($key, $offset, $initial, $expire);
     }
 
     /**
@@ -166,8 +167,8 @@ class Transactional implements KeyValueStoreInterface
     /*
     public function replace($key, $value, $expire = 0)
     {
-        $cache = \end($this->transactions);
-        return $cache->replace($key, $value, $expire);
+        $kvs = \end($this->transactions);
+        return $kvs->replace($key, $value, $expire);
     }
     */
 
@@ -176,8 +177,8 @@ class Transactional implements KeyValueStoreInterface
      */
     public function set($key, $value, $expire = 0)
     {
-        $cache = \end($this->transactions);
-        return $cache->set($key, $value, $expire);
+        $kvs = \end($this->transactions);
+        return $kvs->set($key, $value, $expire);
     }
 
     /**
@@ -185,8 +186,8 @@ class Transactional implements KeyValueStoreInterface
      */
     public function setMultiple(array $items, $expire = 0)
     {
-        $cache = \end($this->transactions);
-        return $cache->setMultiple($items, $expire);
+        $kvs = \end($this->transactions);
+        return $kvs->setMultiple($items, $expire);
     }
 
     /**
@@ -194,8 +195,8 @@ class Transactional implements KeyValueStoreInterface
      */
     public function touch($key, $expire)
     {
-        $cache = \end($this->transactions);
-        return $cache->touch($key, $expire);
+        $kvs = \end($this->transactions);
+        return $kvs->touch($key, $expire);
     }
 
     /**
@@ -207,12 +208,11 @@ class Transactional implements KeyValueStoreInterface
         // we'll rely on buffer to respond data that has not yet committed, so
         // it must never evict from cache - I'd even rather see the app crash
         $buffer = new Buffer(\ini_get('memory_limit'));
-
         // transactions can be nested: the previous transaction will serve as
         // cache backend for the new cache (so when committing a nested
         // transaction, it will commit to the parent transaction)
-        $cache = \end($this->transactions);
-        $this->transactions[] = new Transaction($buffer, $cache);
+        $kvs = \end($this->transactions);
+        $this->transactions[] = new Transaction($buffer, $kvs);
     }
 
     /**

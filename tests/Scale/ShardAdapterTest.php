@@ -12,7 +12,6 @@ class ShardAdapterTest extends AdapterTest
     public function setAdapter(KeyValueStoreInterface $adapter)
     {
         $other = new Memory();
-
         $this->cache = new Shard($adapter, $other);
     }
 }

@@ -193,7 +193,7 @@ class Flysystem extends Base
         }
         $path = $this->path($key);
         $meta = array(
-            'expire' => $expire,
+            'e' => $expire,
         );
         try {
             $success = $this->filesystem->update($path, $this->encode($value, $meta));
@@ -251,7 +251,7 @@ class Flysystem extends Base
         }
         $path = $this->path($key);
         $meta = array(
-            'expire' => $expire,
+            'e' => $expire,
         );
         try {
             $success = $this->filesystem->update($path, $this->encode($value, $meta));

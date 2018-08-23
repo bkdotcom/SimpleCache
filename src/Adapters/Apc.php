@@ -268,7 +268,6 @@ class Apc extends Base
         // negative TTLs don't always seem to properly treat the key as deleted
         if ($ttl < 0) {
             $this->delete($key);
-
             return true;
         }
         // lock required for CAS
@@ -355,8 +354,8 @@ class Apc extends Base
         }
         // generate CAS token to safely CAS existing value with new TTL
         $value = $current['value'];
-        $token = \serialize($value);
-        return $this->cas($token, $key, $value, $ttl);
+        $token = \md5(\serialize($value['v']));
+        return $this->cas($token, $key, $value['v'], $ttl);
     }
 
     /*
@@ -655,7 +654,7 @@ class Apc extends Base
     /**
      * Release a lock.
      *
-     * @param string|string[] $keys
+     * @param string|string[] $keys keys to unlock
      *
      * @return boolean
      */

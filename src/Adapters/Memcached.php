@@ -3,6 +3,8 @@
 namespace bdk\SimpleCache\Adapters;
 
 use bdk\SimpleCache\Adapters\Collections\Utils\PrefixReset as Collection;
+use bdk\SimpleCache\Exception\InvalidKey;
+use bdk\SimpleCache\Exception\OperationFailed;
 
 /**
  * Memcached adapter. Basically just a wrapper over \Memcached, but in an
@@ -166,6 +168,7 @@ class Memcached extends Base
         }
         $keys = \array_map(array($this, 'encodeKey'), $keys);
         $return = $this->client->getMulti($keys, $tokens);
+        $this->throwExceptionOnClientCallFailure($return);
         $return = $return ?: array();
         $tokens = $tokens ?: array();
         $keys = \array_map(array($this, 'decodeKey'), \array_keys($return));
@@ -366,23 +369,6 @@ class Memcached extends Base
     }
 
     /**
-     * Decode a key encoded with encode().
-     *
-     * @param string $key ke to decode
-     *
-     * @return string
-     */
-    protected function decodeKey($key)
-    {
-        // matches %20, %7F, ... but not %21, %22, ...
-        // (=the encoded versions for those encoded in encode)
-        $regex = '/%(?!2[1246789]|3[0-9]|3[B-F]|[4-6][0-9A-F]|5[0-9A-E])[0-9A-Z]{2}/i';
-        return \preg_replace_callback($regex, function ($match) {
-            return \rawurldecode($match[0]);
-        }, $key);
-    }
-
-    /**
      * Add a bit of "expiration buffer" to the expiry we pass to memcached
      * We want to have access to the value after it expires
      *   there could be a failure when recalculating...
@@ -400,5 +386,42 @@ class Memcached extends Base
             $expire = $expire + \min(60*60, \max(60, $tsDiff * 0.25));
         }
         return $expire;
+    }
+
+    /**
+     * Decode a key encoded with encode().
+     *
+     * @param string $key ke to decode
+     *
+     * @return string
+     */
+    protected function decodeKey($key)
+    {
+        // matches %20, %7F, ... but not %21, %22, ...
+        // (=the encoded versions for those encoded in encode)
+        $regex = '/%(?!2[1246789]|3[0-9]|3[B-F]|[4-6][0-9A-F]|5[0-9A-E])[0-9A-Z]{2}/i';
+        return \preg_replace_callback($regex, function ($match) {
+            return \rawurldecode($match[0]);
+        }, $key);
+    }
+
+    /**
+     * Will throw an exception if the returned result from a Memcached call
+     * indicates a failure in the operation.
+     * The exception will contain debug information about the failure.
+     *
+     * @param mixed $result result from client getMulti
+     *
+     * @throws OperationFailed
+     */
+    protected function throwExceptionOnClientCallFailure($result)
+    {
+        if ($result !== false) {
+            return;
+        }
+        throw new OperationFailed(
+            $this->client->getResultMessage(),
+            $this->client->getResultCode()
+        );
     }
 }

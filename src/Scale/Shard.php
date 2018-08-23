@@ -151,6 +151,7 @@ class Shard implements KeyValueStoreInterface
      */
     public function getSet($key, callable $getter, $expire = 0, $failExtend = 60)
     {
+        return $this->getShard($key)->getSet($key, $getter, $expire, $failExtend);
     }
 
     /**
