@@ -90,9 +90,11 @@ class Defer
     }
 
     /**
-     * @param string $key
-     * @param mixed  $value
-     * @param int    $expire
+     * @param string  $key    key to add
+     * @param mixed   $value  new value
+     * @param integer $expire expiry
+     *
+     * @return void
      */
     public function add($key, $value, $expire)
     {
@@ -105,12 +107,14 @@ class Defer
     }
 
     /**
-     * @param mixed  $originalValue No real CAS token, but the original value for this key
-     * @param string $key
-     * @param mixed  $value
-     * @param int    $expire
+     * @param mixed   $originalValueHash No real CAS token, but the original value for this key
+     * @param string  $key               key
+     * @param mixed   $value             new value
+     * @param integer $expire            expiry
+     *
+     * @return void
      */
-    public function cas($token, $key, $value, $expire)
+    public function cas($originalValueHash, $key, $value, $expire)
     {
         /*
             If we made it here, we're sure that logically, the CAS applies with
@@ -133,23 +137,24 @@ class Defer
             @return bool
         */
         $kvs = $this->kvs;
-        $callback = function ($token, $key, $value, $expire) use ($kvs) {
+        $callback = function ($originalValueHash, $key, $value, $expire) use ($kvs) {
             // check if given (local) CAS token was known
-            if ($token === null) {
+            if ($originalValueHash === null) {
                 return false;
             }
             // fetch data from real kvs, getting new valid CAS token
-            $kvs->get($key, $tokenKvs);
+            $valCurrent = $kvs->get($key, $tokenKvs);
             // check if the value we just read from real cache is still the same
             // as the one we saved when doing the original fetch
-            if ($tokenKvs === $token) {
+            $currentValueHash = \md5(\serialize($valCurrent));
+            if ($currentValueHash === $originalValueHash) {
                 // everything still checked out, CAS the value for real now
                 return $kvs->cas($tokenKvs, $key, $value, $expire);
             }
             return false;
         };
         $args = array(
-            'token' => $token,
+            'token' => $originalValueHash,
             'key' => $key,
             'value' => $value,
             'expire' => $expire,
@@ -158,7 +163,9 @@ class Defer
     }
 
     /**
-     * clear all scheduled updates, they'll be wiped out after this anyway
+     * Clear all scheduled updates, they'll be wiped out after this anyway
+     *
+     * @return void
      */
     public function clear()
     {
@@ -168,6 +175,8 @@ class Defer
 
     /**
      * Clears all scheduled writes.
+     *
+     * @return void
      */
     public function clearWrites()
     {
@@ -182,7 +191,7 @@ class Defer
      * (and those that had already been applied will be undone). False will
      * be returned in that case.
      *
-     * @return bool
+     * @return boolean
      */
     public function commit()
     {
@@ -204,10 +213,12 @@ class Defer
     }
 
     /**
-     * @param string $key
-     * @param int    $offset
-     * @param int    $initial
-     * @param int    $expire
+     * @param string  $key     key
+     * @param integer $offset  Value to decrement with
+     * @param integer $initial Initial value (if item doesn't yet exist)
+     * @param integer $expire  expiry
+     *
+     * @return void
      */
     public function decrement($key, $offset, $initial, $expire)
     {
@@ -215,7 +226,9 @@ class Defer
     }
 
     /**
-     * @param string $key
+     * @param string $key key to delete
+     *
+     * @return void
      */
     public function delete($key)
     {
@@ -224,7 +237,9 @@ class Defer
     }
 
     /**
-     * @param string[] $keys
+     * @param string[] $keys keys to delete
+     *
+     * @return void
      */
     public function deleteMultiple(array $keys)
     {
@@ -234,10 +249,12 @@ class Defer
     }
 
     /**
-     * @param string $key
-     * @param int    $offset
-     * @param int    $initial
-     * @param int    $expire
+     * @param string  $key     key
+     * @param integer $offset  Value to increment with
+     * @param integer $initial Initial value (if item doesn't yet exist)
+     * @param integer $expire  expiry
+     *
+     * @return void
      */
     public function increment($key, $offset, $initial, $expire)
     {
@@ -262,9 +279,11 @@ class Defer
     */
 
     /**
-     * @param string $key
-     * @param mixed  $value
-     * @param int    $expire
+     * @param string  $key    key
+     * @param mixed   $value  new value
+     * @param integer $expire expirty
+     *
+     * @return void
      */
     public function set($key, $value, $expire)
     {
@@ -277,8 +296,10 @@ class Defer
     }
 
     /**
-     * @param mixed[] $items
-     * @param int     $expire
+     * @param mixed[] $items  key/value array
+     * @param integer $expire expiry
+     *
+     * @return void
      */
     public function setMultiple(array $items, $expire)
     {
@@ -288,8 +309,10 @@ class Defer
     }
 
     /**
-     * @param string $key
-     * @param int    $expire
+     * @param string  $key    key
+     * @param integer $expire expiry
+     *
+     * @return void
      */
     public function touch($key, $expire)
     {
@@ -311,7 +334,7 @@ class Defer
      * We may have multiple sets & deletes, which can be combined into a single
      * setMultiple or deleteMultiple operation.
      *
-     * @param array $updates
+     * @param array $updates [callable, $args][]
      *
      * @return array
      */
@@ -388,11 +411,13 @@ class Defer
     }
 
     /**
-     * @param string $operation
-     * @param string $key
-     * @param int    $offset
-     * @param int    $initial
-     * @param int    $expire
+     * @param string  $operation "increment" or "decrement"
+     * @param string  $key       key
+     * @param integer $offset    Value to increment/decrement with
+     * @param integer $initial   Initial value (if item doesn't yet exist)
+     * @param integer $expire    expiry
+     *
+     * @return void
      */
     protected function doIncrement($operation, $key, $offset, $initial, $expire)
     {
@@ -491,7 +516,7 @@ class Defer
             $updates[] = array('flush', array($this->kvs, 'clear'), array());
         }
 
-        foreach ($this->keys as $key => $data) {
+        foreach ($this->keys as $data) {
             $updates[] = $data;
         }
 
@@ -502,8 +527,10 @@ class Defer
      * Roll the cache back to pre-transaction state by comparing the current
      * cache values with what we planned to set them to.
      *
-     * @param array $old
-     * @param array $new
+     * @param array $old key=>value array
+     * @param array $new key=>value array
+     *
+     * @return void
      */
     protected function rollback(array $old, array $new)
     {

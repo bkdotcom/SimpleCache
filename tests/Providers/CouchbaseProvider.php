@@ -30,7 +30,7 @@ class CouchbaseProvider extends AdapterProvider
      *
      * @param \CouchbaseBucket $bucket
      *
-     * @return bool
+     * @return boolean
      */
     protected function waitForHealthyServer(\CouchbaseBucket $bucket)
     {

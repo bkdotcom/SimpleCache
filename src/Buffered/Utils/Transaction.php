@@ -130,7 +130,7 @@ class Transaction implements KeyValueStoreInterface
      * To work around this problem, all get() calls will return a unique
      * CAS token and store the value-at-that-time associated with that
      * token. All we have to do when we want to write the data to real cache
-     * is, right before was CAS for real, get the value & (real) cas token
+     * is, right before we CAS for real, get the value & (real) cas token
      * from storage & compare that value to the one we had stored. If that
      * checks out, we can safely resume the CAS with the real token we just
      * received.
@@ -139,11 +139,12 @@ class Transaction implements KeyValueStoreInterface
      */
     public function cas($token, $key, $value, $expire = 0)
     {
-        $tokenOriginal = isset($this->tokens[$token])
+        $originalValueHash = isset($this->tokens[$token])
             ? $this->tokens[$token]
             : null;
-        $tokenValCur = \md5(\serialize($this->get($key)));
-        if ($tokenValCur !== $tokenOriginal) {
+        $valueCur = $this->get($key);
+        $tokenValCur = \md5(\serialize($valueCur));
+        if ($tokenValCur !== $originalValueHash) {
             // value is no longer the same as what we used for token
             return false;
         }
@@ -152,9 +153,8 @@ class Transaction implements KeyValueStoreInterface
         if ($success === false) {
             return false;
         }
-        // only schedule the CAS to be performed on real cache if it was OK on
-        // local cache
-        $this->defer->cas($tokenOriginal, $key, $value, $expire);
+        // only schedule the CAS to be performed on real cache if it was OK on local cache
+        $this->defer->cas($originalValueHash, $key, $value, $expire);
         return true;
     }
 

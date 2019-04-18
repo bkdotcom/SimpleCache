@@ -167,8 +167,18 @@ class Memcached extends Base
             $this->resetLastGetInfo($keys[0]);
         }
         $keys = \array_map(array($this, 'encodeKey'), $keys);
-        $return = $this->client->getMulti($keys, $tokens);
-        $this->throwExceptionOnClientCallFailure($return);
+        if (defined('\Memcached::GET_EXTENDED')) {
+            // Memcached v3
+            $return = $this->client->getMulti($keys, \Memcached::GET_EXTENDED);
+            $this->throwExceptionOnClientCallFailure($return);
+            foreach ($return as $key => $value) {
+                $tokens[$key] = $value['cas'];
+                $return[$key] = $value['value'];
+            }
+        } else {
+            $return = $this->client->getMulti($keys, $tokens);
+            $this->throwExceptionOnClientCallFailure($return);
+        }
         $return = $return ?: array();
         $tokens = $tokens ?: array();
         $keys = \array_map(array($this, 'decodeKey'), \array_keys($return));

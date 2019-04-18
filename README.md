@@ -7,10 +7,10 @@
   * [Redis](#redis)
   * [Couchbase](#couchbase)
   * [APC(u)](#apcu)
-  * [MySQL](#mysql)
-  * [PostgreSQL](#postgresql)
-  * [SQLite](#sqlite)
-  * [Filesystem](#filesystem)
+  * [PdoMySQL](#pdomysql)
+  * [PdoPgSQL](#pdopgsql)
+  * [PdoSQLite](#pdosqlite)
+  * [Flysystem](#flysystem)
   * [Memory](#memory)
 * [Features](#features)
   * [Local buffer](#local-buffer)
@@ -151,7 +151,29 @@ $cache = new \bdk\SimpleCache\Adapters\Apc();
 ```
 
 
-## MySQL
+## MySQLi
+
+*MySQL is the world's most popular open source database. MySQL can
+cost-effectively help you deliver high performance, scalable database
+applications.*
+
+While a database is not a genuine cache, it can also serve as key-value store.
+Just don't expect the same kind of performance you'd expect from a dedicated
+cache server.
+
+But there could be a good reason to use a database-based cache: it's convenient
+if you already use a database and it may have other benefits (like persistent
+storage, replication.)
+
+```php
+// create mysqli object
+$client = new \mysqli('mysql', 'root', '', 'cache');
+// create KeyValueStore object
+$cache = new \bdk\SimpleCache\Adapters\MySQLi($client);
+```
+
+
+## PdoMySQL
 
 *MySQL is the world's most popular open source database. MySQL can
 cost-effectively help you deliver high performance, scalable database
@@ -172,7 +194,7 @@ $client = new PDO('mysql:dbname=cache;host=127.0.0.1', 'root', '');
 $cache = new \bdk\SimpleCache\Adapters\PdoMySQL($client);
 ```
 
-## PostgreSQL
+## PdoPgSQL
 
 *PostgreSQL has a proven architecture that has earned it a strong reputation for
 reliability, data integrity, and correctness.*
@@ -193,7 +215,7 @@ $cache = new \bdk\SimpleCache\Adapters\PdoPgSQL($client);
 ```
 
 
-## SQLite
+## PdoSQLite
 
 *SQLite is a software library that implements a self-contained, serverless,
 zero-configuration, transactional SQL database engine.*
@@ -209,15 +231,19 @@ $client = new PDO('sqlite:cache.db');
 $cache = new \bdk\SimpleCache\Adapters\PdoSQLite($client);
 ```
 
-
 ## Filesystem
 
-*While it's not the fastest kind of cache in terms of I/O access times, opening
-a file usually still beats redoing expensive computations.*
+File based cache
 
-The filesystem-based adapter uses `league\flysystem` to abstract away the file
-operations, and will work with all kinds of storage that `league\filesystem`
-provides.
+```php
+// create KeyValueStore object
+$cache = new \League\Flysystem\Filesystem('/path/to/cache');
+```
+
+## Flysystem
+
+Uses `league\flysystem` to abstract away the file operations, and will work with 
+all kinds of storage that `league\filesystem` provides.
 
 ```php
 // create Flysystem object

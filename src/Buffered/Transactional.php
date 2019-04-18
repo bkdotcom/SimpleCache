@@ -229,7 +229,6 @@ class Transactional implements KeyValueStoreInterface
         if (\count($this->transactions) <= 1) {
             throw new UnbegunTransaction('Attempted to commit without having begun a transaction.');
         }
-        /** @var Transaction $transaction */
         $transaction = \array_pop($this->transactions);
         return $transaction->commit();
     }
