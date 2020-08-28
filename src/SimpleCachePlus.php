@@ -28,6 +28,7 @@ class SimpleCachePlus extends SimpleCache
      */
     public function getSet($key, callable $getter, $ttl = null, $failExtend = 60)
     {
+        // \bdk\Debug::_getChannel('SimpleCache')->warn(__METHOD__, $key);
         $this->assertValidKey($key);
         $expiry = $this->ttlToExpiry($ttl);
         return $this->kvs->getSet($key, $getter, $expiry, $failExtend);
